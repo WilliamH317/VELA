@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VELA - Navigate Your Knowledge
 
-## Getting Started
+AI-powered knowledge management platform that helps teams find answers instantly from scattered documents and conversations.
 
-First, run the development server:
+## Tech Stack
 
+- **Frontend:** Next.js 14 (App Router)
+- **UI:** Shadcn + Tailwind CSS  
+- **Database:** Convex (coming Day 7)
+- **Auth:** Clerk (coming Day 8)
+- **AI:** Claude API (coming Day 13)
+- **Hosting:** Vercel (coming Day 26)
+
+## Development Status
+
+**Current Day:** 6 of 30  
+**Progress:** 20%  
+**Phase:** Infrastructure Setup
+
+### Completed
+- ✅ Next.js 14 with TypeScript
+- ✅ Shadcn UI components
+- ✅ VELA brand colors (Navy + Teal)
+- ✅ Dark mode support
+- ✅ Professional landing page
+- ✅ Complete route structure
+- ✅ Git repository
+
+### Next Steps (Days 7-10)
+- [ ] Install Convex (Day 7)
+- [ ] Configure database schema (Day 7)
+- [ ] Install Clerk authentication (Day 8)
+- [ ] Create first real-time feature (Day 9)
+- [ ] Infrastructure checkpoint (Day 10)
+
+## Local Development
 ```bash
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project Structure
