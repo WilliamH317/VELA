@@ -1,18 +1,36 @@
+// convex/schema.ts
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  // === USER ACCOUNTS (Day 8) ===
+  users: defineTable({
+    clerkId: v.string(),           // Clerk user ID (from identity.subject)
+    email: v.string(),
+    name: v.string(),
+    imageUrl: v.optional(v.string()),
+    subscription: v.union(
+      v.literal("free"),
+      v.literal("pro"),
+      v.literal("enterprise")
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_clerk_id", ["clerkId"]),
+
+  // === DOCUMENTS (Day 7 + Multi-Vertical Support) ===
   documents: defineTable({
-    // === CORE FIELDS ===
-    userId: v.string(),              // Clerk user ID (from JWT)
+    // === USER & ORGANIZATION ===
+    userId: v.string(),                    // Clerk user ID (from JWT)
     organizationId: v.optional(v.string()), // For teams (later)
-    vertical: v.string(),             // "musician", "customer-support", "sales", etc.
+    vertical: v.string(),                   // "musician", "customer_support", "sales", etc.
     
     // === CONTENT ===
     title: v.string(),
-    content: v.string(),              // Full text content
-    contentPlain: v.string(),         // Stripped HTML for search
-    contentPreview: v.string(),       // First 200 chars for UI
+    content: v.string(),                    // Full text content
+    contentPlain: v.string(),               // Stripped HTML for search
+    contentPreview: v.string(),             // First 200 chars for UI
     
     // === METADATA ===
     type: v.union(
@@ -26,22 +44,21 @@ export default defineSchema({
     ),
     
     source: v.object({
-      platform: v.string(),           // "manual", "slack", "google-drive", etc.
-      url: v.optional(v.string()),    // Original URL if imported
+      platform: v.string(),                 // "manual", "slack", "google-drive", etc.
+      url: v.optional(v.string()),          // Original URL if imported
       importedAt: v.optional(v.number()),
       importedBy: v.optional(v.string()),
     }),
     
-    // === CHAOS THEORY METADATA ===
-    // These power VELA's intelligent organization
+    // === CHAOS THEORY METADATA (Days 16-20) ===
     chaosMetadata: v.optional(v.object({
       // Stage 1: Feature Extraction
       features: v.optional(v.array(v.string())),  // ["troubleshooting", "api", "billing"]
       
       // Stage 2: Pattern Classification
       patterns: v.optional(v.array(v.object({
-        type: v.string(),             // "process", "reference", "troubleshooting"
-        confidence: v.number(),       // 0-1
+        type: v.string(),                   // "process", "reference", "troubleshooting"
+        confidence: v.number(),             // 0-1
         keywords: v.array(v.string()),
       }))),
       
@@ -59,36 +76,37 @@ export default defineSchema({
     })),
     
     // === SEARCH & TAGS ===
-    tags: v.array(v.string()),        // User-added tags
+    tags: v.array(v.string()),              // User-added tags
     autoTags: v.optional(v.array(v.string())), // AI-generated tags
     
     // === STATUS ===
     status: v.union(
-      v.literal("processing"),        // Upload in progress
-      v.literal("ready"),             // Ready to query
-      v.literal("error")              // Upload failed
+      v.literal("processing"),              // Upload in progress
+      v.literal("ready"),                   // Ready to query
+      v.literal("error")                    // Upload failed
     ),
     errorMessage: v.optional(v.string()),
     
     // === FILE STORAGE ===
-    fileId: v.optional(v.id("_storage")), // Convex file storage ID
-    fileSize: v.optional(v.number()),     // Bytes
-    mimeType: v.optional(v.string()),     // "application/pdf", etc.
+    fileId: v.optional(v.id("_storage")),   // Convex file storage ID
+    fileSize: v.optional(v.number()),       // Bytes
+    mimeType: v.optional(v.string()),       // "application/pdf", etc.
     
     // === TIMESTAMPS ===
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
-    processedAt: v.optional(v.number()),  // When AI analysis completed
+    processedAt: v.optional(v.number()),    // When AI analysis completed
     
     // === PRIVACY ===
-    isPublic: v.boolean(),            // Can other users see it?
+    isPublic: v.boolean(),                  // Can other users see it?
   })
     // === INDEXES FOR FAST QUERIES ===
-    .index("by_user", ["userId"])                    // Get user's docs
+    .index("by_user", ["userId"])                      // Get user's docs
     .index("by_user_vertical", ["userId", "vertical"]) // Filter by vertical
-    .index("by_status", ["status"])                  // Find processing docs
-    .index("by_organization", ["organizationId"])    // Team docs
-    .index("by_created", ["createdAt"])              // Sort by date
+    .index("by_user_and_status", ["userId", "status"]) // User's processing docs
+    .index("by_status", ["status"])                    // Find processing docs
+    .index("by_organization", ["organizationId"])      // Team docs
+    .index("by_created", ["createdAt"])                // Sort by date
     
     // === FULL-TEXT SEARCH INDEX ===
     .searchIndex("search_content", {

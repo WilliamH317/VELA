@@ -1,145 +1,119 @@
+// app/(marketing)/page.tsx
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { Search, Zap, Brain } from "lucide-react";
+import { Sailboat } from "lucide-react";
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen flex-col">
       {/* Navigation */}
-      <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
+      <header className="border-b border-[#1B3D5C]/10">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            {/* Sailboat icon placeholder - replace with actual logo */}
-            <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">V</span>
-            </div>
-            <span className="font-bold text-xl">ELA</span>
+            <Sailboat className="h-8 w-8 text-[#00BCD4]" />
+            <span className="text-xl font-bold text-[#1B3D5C] dark:text-white">
+              VELA
+            </span>
           </div>
           
+          {/* Auth buttons */}
           <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <Button variant="outline" size="sm">
-              Sign In
-            </Button>
-            <Button size="sm" className="bg-primary hover:bg-primary/90">
-              Get Started
-            </Button>
+            <Link href="/sign-in">
+              <Button 
+                variant="ghost" 
+                className="text-[#1B3D5C] hover:bg-[#1B3D5C]/10"
+              >
+                Sign In
+              </Button>
+            </Link>
+            <Link href="/sign-up">
+              <Button className="bg-[#00BCD4] hover:bg-[#00ACC1]">
+                Get Started
+              </Button>
+            </Link>
           </div>
         </div>
-      </nav>
+      </header>
 
       {/* Hero Section */}
-      <section className="container py-24 md:py-32 lg:py-40">
-        <div className="mx-auto max-w-3xl text-center">
-          <div className="mb-8 inline-block rounded-full border bg-muted px-4 py-1.5 text-sm">
-            ChatGPT for company knowledge
-          </div>
-          
-          <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
-            Navigate Your{" "}
-            <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-              Knowledge
-            </span>
-          </h1>
-          
-          <p className="mb-10 text-xl text-muted-foreground sm:text-2xl">
-            Stop searching. Start creating. Find answers instantly from scattered documents
-            and conversations—no folders needed.
-          </p>
-          
-          <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
-            <Button size="lg" className="text-lg h-12 px-8 bg-primary hover:bg-primary/90">
-              Start Free Trial
-            </Button>
-            <Button size="lg" variant="outline" className="text-lg h-12 px-8">
-              Watch Demo
-            </Button>
-          </div>
-          
-          <p className="mt-6 text-sm text-muted-foreground">
-            Free forever. No credit card required. 2 minutes to set up.
-          </p>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="container py-24 border-t">
-        <div className="mx-auto max-w-5xl">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">
-              Built for teams who think, not file
-            </h2>
+      <main className="flex-1">
+        <section className="container mx-auto px-4 py-24 text-center">
+          <div className="mx-auto max-w-3xl space-y-8">
+            <h1 className="text-5xl font-bold leading-tight text-[#1B3D5C] dark:text-white md:text-6xl">
+              Navigate Your Knowledge
+            </h1>
             <p className="text-xl text-muted-foreground">
-              Chaos theory powers intelligent organization—patterns emerge naturally
+              Stop searching, start creating. VELA uses chaos theory to organize 
+              your scattered knowledge into instant answers.
             </p>
+            <div className="flex justify-center gap-4">
+              <Link href="/sign-up">
+                <Button size="lg" className="bg-[#00BCD4] hover:bg-[#00ACC1] text-lg">
+                  Start Free Trial
+                </Button>
+              </Link>
+              <Link href="/dashboard">
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  className="border-[#1B3D5C] text-[#1B3D5C] hover:bg-[#1B3D5C] hover:text-white text-lg"
+                >
+                  View Dashboard
+                </Button>
+              </Link>
+            </div>
           </div>
+        </section>
 
-          <div className="grid gap-8 md:grid-cols-3">
-            {/* Feature 1: AI Search */}
-            <Card className="border-2 hover:border-accent transition-colors">
-              <CardHeader>
-                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10">
-                  <Search className="h-6 w-6 text-accent" />
+        {/* Features */}
+        <section className="border-t border-[#1B3D5C]/10 bg-gray-50 dark:bg-gray-900 py-24">
+          <div className="container mx-auto px-4">
+            <h2 className="text-center text-3xl font-bold text-[#1B3D5C] dark:text-white mb-12">
+              Built for Knowledge Workers
+            </h2>
+            <div className="grid gap-8 md:grid-cols-3 max-w-5xl mx-auto">
+              <div className="text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#00BCD4]">
+                  <Sailboat className="h-6 w-6 text-white" />
                 </div>
-                <CardTitle className="text-xl">AI-Powered Search</CardTitle>
-                <CardDescription className="text-base">
-                  Ask questions in plain English. Get instant answers from all your documents
-                  and conversations.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            {/* Feature 2: Pattern Detection */}
-            <Card className="border-2 hover:border-accent transition-colors">
-              <CardHeader>
-                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10">
-                  <Brain className="h-6 w-6 text-accent" />
+                <h3 className="mb-2 text-xl font-semibold text-[#1B3D5C] dark:text-white">
+                  Intelligent Navigation
+                </h3>
+                <p className="text-muted-foreground">
+                  Chaos theory finds patterns traditional folders miss
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#00BCD4]">
+                  <Sailboat className="h-6 w-6 text-white" />
                 </div>
-                <CardTitle className="text-xl">Chaos Theory Patterns</CardTitle>
-                <CardDescription className="text-base">
-                  Auto-detect workflows, relationships, and hidden connections across
-                  scattered knowledge.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            {/* Feature 3: Instant Answers */}
-            <Card className="border-2 hover:border-accent transition-colors">
-              <CardHeader>
-                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10">
-                  <Zap className="h-6 w-6 text-accent" />
+                <h3 className="mb-2 text-xl font-semibold text-[#1B3D5C] dark:text-white">
+                  Instant Answers
+                </h3>
+                <p className="text-muted-foreground">
+                  AI-powered search across all your documents
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#00BCD4]">
+                  <Sailboat className="h-6 w-6 text-white" />
                 </div>
-                <CardTitle className="text-xl">3-Second Answers</CardTitle>
-                <CardDescription className="text-base">
-                  Find what you need before you finish typing. Save hours per week on
-                  information retrieval.
-                </CardDescription>
-              </CardHeader>
-            </Card>
+                <h3 className="mb-2 text-xl font-semibold text-[#1B3D5C] dark:text-white">
+                  Time Saved
+                </h3>
+                <p className="text-muted-foreground">
+                  Get your hours back—no more endless searching
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="container py-24 border-t">
-        <div className="mx-auto max-w-3xl text-center">
-          <h2 className="text-3xl font-bold mb-4">
-            Ready to reclaim your time?
-          </h2>
-          <p className="text-xl text-muted-foreground mb-8">
-            Join teams who've eliminated hours of daily searching
-          </p>
-          <Button size="lg" className="text-lg h-12 px-8 bg-primary hover:bg-primary/90">
-            Get Started Free
-          </Button>
-        </div>
-      </section>
+        </section>
+      </main>
 
       {/* Footer */}
-      <footer className="border-t py-12">
-        <div className="container text-center text-sm text-muted-foreground">
-          <p>© 2026 VELA. Navigate Your Knowledge.</p>
+      <footer className="border-t border-[#1B3D5C]/10 py-8">
+        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+          © 2026 VELA. Navigate Your Knowledge.
         </div>
       </footer>
     </div>
