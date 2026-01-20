@@ -1,14 +1,7 @@
-// src/app/layout.tsx
-import { Inter } from "next/font/google";
-import { Providers } from "./providers";
+// app/layout.tsx
 import "./globals.css";
-
-const inter = Inter({ subsets: ["latin"] });
-
-export const metadata = {
-  title: "VELA - Navigate Your Knowledge",
-  description: "AI-powered knowledge base for teams",
-};
+import { Providers } from "@/components/providers";
+import { UserSetup } from "@/components/user-setup";
 
 export default function RootLayout({
   children,
@@ -16,9 +9,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <Providers>{children}</Providers>
+    <html lang="en">
+      <body>
+        <Providers>
+          <UserSetup />
+          {children}
+        </Providers>
       </body>
     </html>
   );

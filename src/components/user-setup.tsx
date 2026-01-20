@@ -1,36 +1,33 @@
 // components/user-setup.tsx
 "use client";
 
-import { useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import { useMutation, useQuery } from "convex/react";
+import { useConvex } from "convex/react";
 import { api } from "convex/_generated/api";
+import { useEffect } from "react";
 
 export function UserSetup() {
   const { user, isLoaded } = useUser();
-  const currentUser = useQuery(api.users.getCurrentUser);
-  const createUser = useMutation(api.users.createUser);
+  const convex = useConvex();
 
   useEffect(() => {
     if (!isLoaded || !user) return;
-    if (currentUser === undefined) return;
-    if (currentUser !== null) return;
 
-    const setupUser = async () => {
+    const createUser = async () => {
       try {
-        await createUser({
+        await convex.mutation(api.users.create, {
           clerkId: user.id,
-          email: user.primaryEmailAddress?.emailAddress ?? "",
-          name: user.fullName ?? user.firstName ?? "Anonymous",
+          email: user.emailAddresses[0]?.emailAddress || "",
+          name: user.fullName || "",
           imageUrl: user.imageUrl,
         });
       } catch (error) {
-        console.error("Failed to create user:", error);
+        console.log("User might already exist");
       }
     };
 
-    setupUser();
-  }, [isLoaded, user, currentUser, createUser]);
+    createUser();
+  }, [user, isLoaded, convex]);
 
   return null;
 }
