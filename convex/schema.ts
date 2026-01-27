@@ -32,6 +32,9 @@ export default defineSchema({
     contentPlain: v.string(),               // Stripped HTML for search
     contentPreview: v.string(),             // First 200 chars for UI
     
+    // === DUPLICATE DETECTION (Day 10) ===
+    contentHash: v.optional(v.string()),                // SHA-256 hash of title + content for duplicate detection
+    
     // === METADATA ===
     type: v.union(
       v.literal("pdf"),
@@ -107,6 +110,7 @@ export default defineSchema({
     .index("by_status", ["status"])                    // Find processing docs
     .index("by_organization", ["organizationId"])      // Team docs
     .index("by_created", ["createdAt"])                // Sort by date
+    .index("by_user_and_hash", ["userId", "contentHash"]) // 🆕 Duplicate detection
     
     // === FULL-TEXT SEARCH INDEX ===
     .searchIndex("search_content", {

@@ -35,7 +35,7 @@ export default function DashboardLayout({
                 href="/search"
                 className="text-sm font-medium text-[#1B3D5C] hover:text-[#00BCD4] transition-colors"
               >
-                Search
+                COMPASS
               </Link>
               <UserButton afterSignOutUrl="/" />
             </div>

@@ -27,10 +27,10 @@ export default async function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold text-[#1B3D5C] dark:text-white">
-            Dashboard
+            Welcome aboard, Captain
           </h1>
           <p className="text-muted-foreground mt-2">
-            Welcome to VELA - your knowledge navigation system
+            VELA - your knowledge navigation system
           </p>
         </div>
         
@@ -85,7 +85,7 @@ export default async function DashboardPage() {
         <Card className="border-[#1B3D5C]/20 hover:border-[#00BCD4] transition-colors">
           <CardHeader>
             <CardTitle className="text-[#1B3D5C] dark:text-white">
-              Ask AI
+              LIGHTHOUSE
             </CardTitle>
             <CardDescription>
               Get answers powered by chaos theory intelligence

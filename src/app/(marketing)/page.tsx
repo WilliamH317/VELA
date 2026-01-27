@@ -28,7 +28,7 @@ export default function HomePage() {
             </Link>
             <Link href="/sign-up">
               <Button className="bg-[#00BCD4] hover:bg-[#00ACC1]">
-                Get Started
+                Set Sail
               </Button>
             </Link>
           </div>
@@ -49,7 +49,7 @@ export default function HomePage() {
             <div className="flex justify-center gap-4">
               <Link href="/sign-up">
                 <Button size="lg" className="bg-[#00BCD4] hover:bg-[#00ACC1] text-lg">
-                  Start Free Trial
+                  Begin Your Voyage
                 </Button>
               </Link>
               <Link href="/dashboard">

@@ -24,21 +24,31 @@ export default function DocumentsPage() {
   );
   const createDocument = useMutation(api.documents.create);
   
-  const handleCreate = async () => {
-    if (!title.trim() || !content.trim()) return;
+  
+const handleCreate = async () => {
+  if (!title || !content) return;
+  
+  setIsCreating(true);
+  try {
+    await createDocument({ 
+      title, 
+      content,
+      vertical: "musician",
+      type: "text",
+    });
+    setTitle("");
+    setContent("");
+  } catch (error) {
+    // 🔧 IMPROVED: Show the actual error message
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : "Failed to create document. Please try again.";
     
-    setIsCreating(true);
-    try {
-      await createDocument({ title, content });
-      setTitle("");
-      setContent("");
-    } catch (error) {
-      console.error("Failed to create document:", error);
-      alert("Failed to create document. Please try again.");
-    } finally {
-      setIsCreating(false);
-    }
-  };
+    alert(errorMessage); // This will now show: "A document with identical content already exists: 'Test Document'"
+  } finally {
+    setIsCreating(false);
+  }
+};
   
   // Handle loading state
   if (!userLoaded) {
