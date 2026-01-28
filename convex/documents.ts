@@ -142,6 +142,79 @@ export const create = mutation({
   },
 });
 
+/**
+ * COMPASS Search - Full-text search across user's documents
+ * 
+ * Uses Convex search index for fast, relevant results.
+ * Filters by userId for security.
+ * Returns top 20 results ordered by relevance.
+ */
+export const search = query({
+  args: { 
+    query: v.string(),
+    type: v.optional(v.union(
+      v.literal("pdf"), 
+      v.literal("text"), 
+      v.literal("markdown")
+    )),
+  },
+  handler: async (ctx, args) => {
+    // 1. ALWAYS check authentication first
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
+    // 2. Validate query (empty queries return no results)
+    const trimmedQuery = args.query.trim();
+    if (trimmedQuery.length === 0) {
+      return [];
+    }
+    
+    // 3. Build search query with user filter
+    let searchQuery = ctx.db
+      .query("documents")
+      .withSearchIndex("search_content", q => 
+        q.search("contentPlain", trimmedQuery)
+         .eq("userId", identity.subject)
+      );
+    
+    // 4. Optional type filter
+    if (args.type) {
+      // Note: Search index filters are limited
+      // We filter results in-memory for type
+      const results = await searchQuery.take(100); // Get more for filtering
+      return results
+        .filter(doc => doc.type === args.type)
+        .slice(0, 20);
+    }
+    
+    // 5. Execute search and return top 20 results
+    return await searchQuery.take(20);
+  },
+});
+
+/**
+ * Get document by ID for viewing
+ * Used when clicking search results
+ */
+export const getById = query({
+  args: { id: v.id("documents") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    
+    const document = await ctx.db.get(args.id);
+    
+    // Verify ownership
+    if (!document || document.userId !== identity.subject) {
+      return null;
+    }
+    
+    return document;
+  },
+});
+
 // ===================================================================
 // DAY 11: FILE UPLOAD MUTATIONS
 // ===================================================================
@@ -513,6 +586,7 @@ function generateSimpleHash(content: string): string {
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').trim();
 }
+
 
 // ===================================================================
 // 🎉 DAY 11 BACKEND: 95% COMPLETE!
