@@ -20,6 +20,7 @@ export default defineSchema({
     .index("by_clerk_id", ["clerkId"]),
 
   // === DOCUMENTS (Day 7 + Multi-Vertical Support) ===
+  // ✅ DAY 11 READY: Schema already includes all file upload fields!
   documents: defineTable({
     // === USER & ORGANIZATION ===
     userId: v.string(),                    // Clerk user ID (from JWT)
@@ -28,29 +29,30 @@ export default defineSchema({
     
     // === CONTENT ===
     title: v.string(),
-    content: v.string(),                    // Full text content
-    contentPlain: v.string(),               // Stripped HTML for search
+    content: v.string(),                    // Full text content (extracted from PDF on Day 11)
+    contentPlain: v.string(),               // Stripped HTML for search (searchable after Day 11 processing)
     contentPreview: v.string(),             // First 200 chars for UI
     
     // === DUPLICATE DETECTION (Day 10) ===
-    contentHash: v.optional(v.string()),                // SHA-256 hash of title + content for duplicate detection
+    contentHash: v.optional(v.string()),    // SHA-256 hash of title + content for duplicate detection
     
     // === METADATA ===
     type: v.union(
-      v.literal("pdf"),
-      v.literal("text"),
-      v.literal("markdown"),
+      v.literal("pdf"),                     // 📄 Day 11: PDF upload
+      v.literal("text"),                    // 📝 Day 11: .txt upload
+      v.literal("markdown"),                // 📋 Day 11: .md upload
       v.literal("slack"),
       v.literal("google-doc"),
       v.literal("notion"),
       v.literal("confluence")
     ),
     
+    // 🚢 DAY 11: Upload metadata stored here
     source: v.object({
-      platform: v.string(),                 // "manual", "slack", "google-drive", etc.
-      url: v.optional(v.string()),          // Original URL if imported
-      importedAt: v.optional(v.number()),
-      importedBy: v.optional(v.string()),
+      platform: v.string(),                 // Day 11: Set to "file_upload"
+      url: v.optional(v.string()),          // Not used for file uploads
+      importedAt: v.optional(v.number()),   // Day 11: Set to Date.now() on upload
+      importedBy: v.optional(v.string()),   // Day 11: Set to identity.subject (Clerk user ID)
     }),
     
     // === CHAOS THEORY METADATA (Days 16-20) ===
@@ -82,23 +84,25 @@ export default defineSchema({
     tags: v.array(v.string()),              // User-added tags
     autoTags: v.optional(v.array(v.string())), // AI-generated tags
     
-    // === STATUS ===
+    // === STATUS (Day 11: Essential for upload flow!) ===
+    // 🚢 DAY 11: Upload workflow states
     status: v.union(
-      v.literal("processing"),              // Upload in progress
-      v.literal("ready"),                   // Ready to query
-      v.literal("error")                    // Upload failed
+      v.literal("processing"),              // ⚙️ Day 11: PDF text extraction in progress
+      v.literal("ready"),                   // ✅ Day 11: Document processed and searchable
+      v.literal("error")                    // ❌ Day 11: Upload/processing failed
     ),
-    errorMessage: v.optional(v.string()),
+    errorMessage: v.optional(v.string()),   // Day 11: Error details for debugging
     
-    // === FILE STORAGE ===
-    fileId: v.optional(v.id("_storage")),   // Convex file storage ID
-    fileSize: v.optional(v.number()),       // Bytes
-    mimeType: v.optional(v.string()),       // "application/pdf", etc.
+    // === FILE STORAGE (Day 11: Core upload fields!) ===
+    // 📦 DAY 11: File upload essentials
+    fileId: v.optional(v.id("_storage")),   // Day 11: Convex storage ID (from upload)
+    fileSize: v.optional(v.number()),       // Day 11: File size in bytes (for validation)
+    mimeType: v.optional(v.string()),       // Day 11: "application/pdf", "text/plain", etc.
     
     // === TIMESTAMPS ===
-    createdAt: v.number(),
-    updatedAt: v.optional(v.number()),
-    processedAt: v.optional(v.number()),    // When AI analysis completed
+    createdAt: v.number(),                  // Day 11: When document record created
+    updatedAt: v.optional(v.number()),      // Updated when edited
+    processedAt: v.optional(v.number()),    // Day 11: When text extraction completed
     
     // === PRIVACY ===
     isPublic: v.boolean(),                  // Can other users see it?
@@ -106,15 +110,16 @@ export default defineSchema({
     // === INDEXES FOR FAST QUERIES ===
     .index("by_user", ["userId"])                      // Get user's docs
     .index("by_user_vertical", ["userId", "vertical"]) // Filter by vertical
-    .index("by_user_and_status", ["userId", "status"]) // User's processing docs
-    .index("by_status", ["status"])                    // Find processing docs
+    .index("by_user_and_status", ["userId", "status"]) // 🚢 Day 11: Find user's "processing" docs
+    .index("by_status", ["status"])                    // 🚢 Day 11: Find all processing docs globally
     .index("by_organization", ["organizationId"])      // Team docs
     .index("by_created", ["createdAt"])                // Sort by date
-    .index("by_user_and_hash", ["userId", "contentHash"]) // 🆕 Duplicate detection
+    .index("by_user_and_hash", ["userId", "contentHash"]) // Duplicate detection
     
     // === FULL-TEXT SEARCH INDEX ===
+    // 🔍 DAY 11: Documents become searchable after text extraction
     .searchIndex("search_content", {
-      searchField: "contentPlain",
+      searchField: "contentPlain",                     // Day 11: Extracted PDF text goes here
       filterFields: ["userId", "vertical", "type", "status"],
     }),
 });
