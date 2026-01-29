@@ -122,4 +122,29 @@ export default defineSchema({
       searchField: "contentPlain",                     // Day 11: Extracted PDF text goes here
       filterFields: ["userId", "vertical", "type", "status"],
     }),
+
+  // === AI QUERY LOGS (Day 13) ===
+  // 🏮 LIGHTHOUSE: Track all questions asked to Claude API
+  queries: defineTable({
+    // === USER ===
+    userId: v.string(),                    // Clerk user ID (who asked the question)
+    
+    // === QUESTION & ANSWER ===
+    query: v.string(),                     // User's question to the LIGHTHOUSE
+    answer: v.string(),                    // Claude's response
+    
+    // === CONTEXT ===
+    documentIds: v.array(v.id("documents")), // Which docs were searched
+    
+    // === PERFORMANCE METRICS ===
+    tokensUsed: v.number(),                // Input + output tokens (for cost tracking)
+    responseTimeMs: v.number(),            // How long Claude took to respond
+    model: v.string(),                     // Which Claude model was used
+    
+    // === TIMESTAMP ===
+    timestamp: v.number(),                 // When the question was asked
+  })
+    .index("by_user", ["userId"])          // Get user's query history
+    .index("by_timestamp", ["timestamp"])  // Sort queries by date
+    .index("by_user_and_timestamp", ["userId", "timestamp"]), // User's recent queries
 });
