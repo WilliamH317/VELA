@@ -1675,8 +1675,7 @@ return <DataDisplay data={data} />;
 
 ---
 
-# VELA Learning Log - Day 11
-## Date: January 28, 2026
+# Day 11 - [1/28/2026]
 ## Feature: File Upload System with Real-Time Processing
 
 ---
@@ -2091,7 +2090,8 @@ The real magic is watching the status badges update in real-time. That's the kin
 
 **End of Day 11 Log**
 
-# VELA Development Learning Log
+
+# Day 12 - [1/30/2026]
 
 ## 30-Day MVP Sprint Progress Tracker
 
@@ -2936,3 +2936,708 @@ Marketing, documentation, and public release
 *Last Updated: Day 12 - January 28, 2026*  
 *Developer: Will*  
 *Project: VELA - Navigate Your Knowledge*
+
+# Day 14 - [1/31/2026]
+
+## 🎯 Day 14: LIGHTHOUSE AI Q&A Feature (January 31, 2026)
+
+### **Achievement Unlocked: Dual-Mode AI Search System** 🔦✨
+
+Built a complete AI-powered question-answering system with automatic document search and manual selection modes, integrating Claude API for intelligent responses.
+
+---
+
+## 🏆 What We Built Today
+
+### **LIGHTHOUSE Component (600+ lines)**
+- **Dual-mode search system:**
+  - Smart Search (automatic): AI finds 5 most relevant documents
+  - Manual Selection: User chooses specific documents
+- **Complete UI with VELA branding:**
+  - Gradient lighthouse icon (Navy → Teal)
+  - Tabs for mode switching
+  - Document selection with checkboxes
+  - Example questions for quick start
+  - Loading animations (pulsing lighthouse, not spinners!)
+  - Error handling with nautical messaging
+  - Answer display with source citations
+  - Performance metrics (tokens, time, documents searched)
+  - Mobile responsive design
+
+### **Convex AI Actions (2 approaches)**
+- **`askQuestion`** - Manual document selection
+- **`generateAnswer`** - Automatic smart search with full-text search
+- Error handling with retry logic
+- Token usage tracking
+- Response time measurement
+- Source citation metadata
+
+---
+
+## 🐛 Epic Debugging Journey
+
+### **Problem 1: 404 Errors Despite Files Existing**
+**Symptom:** All routes returning 404, even `/dashboard` and `/lighthouse`
+
+**Root Causes Found:**
+1. **Empty `app/` folder at root level** blocking Next.js from finding `src/app/`
+2. **Convex not running** - generated API types missing
+3. **Route groups misunderstanding** - `(dashboard)` folder doesn't add to URL path
+4. **Import path issues** - `@/convex/` vs `convex/` for generated files
+
+**Solutions:**
+```powershell
+# Remove blocking folder
+Remove-Item "app" -Recurse -Force
+
+# Start Convex first (generates types)
+npx convex dev
+
+# Then start Next.js
+npm run dev
+
+# Fix imports in components
+# Change: @/convex/_generated/api
+# To: convex/_generated/api
+```
+
+---
+
+## 💡 Critical Learnings
+
+### **1. Next.js 16 Route Groups**
+**Route groups use parentheses `(name)` and DON'T add to URL path:**
+
+```
+src/app/(dashboard)/
+├── layout.tsx           ← Shared layout
+├── lighthouse/
+│   └── page.tsx         ← Creates /lighthouse (NOT /dashboard/lighthouse)
+└── documents/
+    └── page.tsx         ← Creates /documents (NOT /dashboard/documents)
+```
+
+**Use route groups for:**
+- Shared layouts without affecting URLs
+- Organizing related routes
+- Applying middleware to groups
+
+**DON'T use route groups if:**
+- You want the folder name in the URL
+- You're building nested routes
+
+**Our Fix:** Updated all navigation links from `/dashboard/lighthouse` to `/lighthouse`
+
+---
+
+### **2. Windows PowerShell vs Bash**
+
+**Key Differences:**
+
+| Task | Bash (Mac/Linux) | PowerShell (Windows) |
+|------|------------------|----------------------|
+| List files | `ls -la` | `Get-ChildItem` or `ls` (alias) |
+| Test path | `test -f file.txt` | `Test-Path "file.txt"` |
+| Create folder | `mkdir folder` | `New-Item -ItemType Directory` |
+| Create file | `touch file.txt` | `New-Item -ItemType File` |
+| Delete | `rm -rf folder` | `Remove-Item -Recurse -Force` |
+| View file | `cat file.txt` | `Get-Content "file.txt"` |
+
+**Critical for Windows developers:**
+- Parentheses in folder names require quotes: `"app/(dashboard)"`
+- Use backslashes `\` for paths (or forward slashes `/` work too)
+- PowerShell is case-insensitive (Bash is case-sensitive)
+
+---
+
+### **3. src/ Folder Structure with Next.js**
+
+**When using `src/` directory:**
+
+✅ **tsconfig.json must map correctly:**
+```json
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "convex/*": ["./convex/*"]
+    }
+  }
+}
+```
+
+✅ **Import patterns:**
+- Components: `@/components/lighthouse-search`
+- Convex API: `convex/_generated/api` (NOT `@/convex/_generated/api`)
+- Reason: Convex files are at root level, not in `src/`
+
+❌ **Common mistakes:**
+- Having both `app/` and `src/app/` folders (Next.js picks root `app/` first)
+- Using `@/convex/` when Convex is at root
+- Forgetting to run `npx convex dev` to generate types
+
+---
+
+### **4. Convex Generated Files Dependency**
+
+**CRITICAL:** Convex must be running before Next.js compiles!
+
+**Why?** Your components import:
+```typescript
+import { api } from "convex/_generated/api";
+import type { Id } from "convex/_generated/dataModel";
+```
+
+These files are **generated by Convex** when you run `npx convex dev`.
+
+**Correct startup sequence:**
+```powershell
+# Terminal 1: Start Convex first
+npx convex dev
+# Wait for: ✓ Convex functions ready!
+
+# Terminal 2: Start Next.js second
+npm run dev
+```
+
+**If you start Next.js first:**
+- TypeScript errors: "Cannot find module"
+- Build fails
+- 404s on all routes
+
+---
+
+### **5. File System vs VS Code Display**
+
+**Big lesson:** Just because a file appears in VS Code doesn't mean it exists on disk!
+
+**What we encountered:**
+- File showed in VS Code explorer as "5, M" (5 lines, Modified)
+- `Test-Path` returned `False`
+- File was in VS Code's memory but not saved to disk
+
+**Solution:**
+1. Always save explicitly (Ctrl+S)
+2. Verify with PowerShell: `Test-Path "path/to/file"`
+3. Check file size: `(Get-Item "file").Length`
+4. Close and reopen VS Code if unsure
+
+---
+
+### **6. Component Creation Patterns**
+
+**What worked for large components (600+ lines):**
+
+❌ **Don't:**
+- Create file in VS Code, paste code, hope it works
+- Use PowerShell `Out-File` with newlines (encoding issues)
+- Trust that VS Code saved the file
+
+✅ **Do:**
+```powershell
+# Create the directory first
+New-Item -Path "src/components" -ItemType Directory -Force
+
+# Create the file
+New-Item -Path "src/components/lighthouse-search.tsx" -ItemType File -Force
+
+# Open in VS Code
+code "src/components/lighthouse-search.tsx"
+
+# Paste code, save (Ctrl+S)
+
+# Verify it exists
+Test-Path "src/components/lighthouse-search.tsx"
+(Get-Item "src/components/lighthouse-search.tsx").Length  # Should be 20000+
+```
+
+---
+
+## 🎨 Design Patterns Learned
+
+### **1. Dual-Mode UI Pattern**
+**Use tabs to switch between related but different modes:**
+
+```typescript
+const [mode, setMode] = useState<"auto" | "manual">("auto");
+
+<Tabs value={mode} onValueChange={setMode}>
+  <TabsList>
+    <TabsTrigger value="auto">Smart Search</TabsTrigger>
+    <TabsTrigger value="manual">Select Documents</TabsTrigger>
+  </TabsList>
+  
+  <TabsContent value="auto">
+    {/* Automatic search UI */}
+  </TabsContent>
+  
+  <TabsContent value="manual">
+    {/* Manual selection UI */}
+  </TabsContent>
+</Tabs>
+```
+
+**Benefits:**
+- Clear mental model for users
+- Easy to switch between modes
+- Can optimize API calls per mode
+- Better UX than dropdown or radio buttons
+
+---
+
+### **2. Loading State Animations**
+
+**VELA principle: Wave animations, never spinners!**
+
+```typescript
+{isLoading && (
+  <div className="relative">
+    <div className="w-24 h-24 rounded-full bg-gradient-to-br 
+      from-[#1B3D5C] to-[#00BCD4] animate-pulse" />
+    <div className="absolute inset-0 flex items-center justify-center">
+      <Lightbulb className="h-12 w-12 text-white" />
+    </div>
+  </div>
+)}
+```
+
+**Why this works:**
+- Pulsing gradient feels organic (like waves)
+- Icon provides context (lighthouse = searching)
+- No generic spinner → brand consistency
+
+---
+
+### **3. Error Handling with Brand Personality**
+
+**Generic error:**
+```typescript
+❌ "Error: Failed to fetch"
+```
+
+**VELA error:**
+```typescript
+✅ "Navigating through fog - trying again..."
+```
+
+**Pattern:**
+```typescript
+<Card className="p-6 border-red-200 bg-red-50">
+  <AlertCircle className="h-5 w-5 text-red-600" />
+  <h3 className="font-semibold text-red-900">
+    Navigating through fog
+  </h3>
+  <p className="text-sm text-red-700">{error}</p>
+  <Button onClick={() => setError(null)}>
+    Try Again
+  </Button>
+</Card>
+```
+
+**Benefits:**
+- Less scary for users
+- Maintains brand voice
+- Implies temporary issue (fog clears)
+- Action-oriented ("Try Again")
+
+---
+
+### **4. Performance Metrics Display**
+
+**Show users what happened under the hood:**
+
+```typescript
+<div className="flex items-center gap-4 text-xs text-muted-foreground">
+  <span className="flex items-center gap-1">
+    <Clock className="h-3 w-3" />
+    {metadata.responseTimeMs}ms
+  </span>
+  <span className="flex items-center gap-1">
+    <Zap className="h-3 w-3" />
+    {metadata.tokensUsed.toLocaleString()} tokens
+  </span>
+  <span className="flex items-center gap-1">
+    <FileText className="h-3 w-3" />
+    {metadata.documentsSearched} documents
+  </span>
+  <span className="text-[#00BCD4]">
+    {metadata.model}
+  </span>
+</div>
+```
+
+**Why this matters:**
+- Builds trust (transparency)
+- Educational (users learn about AI)
+- Differentiator (most AI tools hide this)
+- Useful for debugging
+
+---
+
+## 🔧 Technical Implementation Details
+
+### **Claude API Integration Pattern**
+
+```typescript
+// convex/ai.ts
+import Anthropic from "@anthropic-ai/sdk";
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY!,
+});
+
+export const generateAnswer = action({
+  args: {
+    query: v.string(),
+    maxSources: v.number(),
+    maxTokens: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const startTime = Date.now();
+    
+    // 1. Search documents
+    const searchResults = await ctx.runQuery(
+      api.documents.search,
+      { query: args.query, limit: args.maxSources }
+    );
+    
+    // 2. Build context
+    const context = searchResults
+      .map(doc => `Title: ${doc.title}\n\n${doc.content}`)
+      .join("\n\n---\n\n");
+    
+    // 3. Call Claude
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: args.maxTokens,
+      messages: [{
+        role: "user",
+        content: `Context:\n${context}\n\nQuestion: ${args.query}\n\nProvide a clear answer with specific details from the documents.`,
+      }],
+    });
+    
+    // 4. Return structured response
+    return {
+      answer: response.content[0].text,
+      sources: searchResults.map(d => ({
+        id: d._id,
+        title: d.title,
+        type: d.type,
+      })),
+      metadata: {
+        tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
+        responseTimeMs: Date.now() - startTime,
+        model: response.model,
+        documentsSearched: searchResults.length,
+      },
+    };
+  },
+});
+```
+
+**Key techniques:**
+- Start time tracking for performance metrics
+- Search BEFORE calling API (efficient)
+- Build focused context from relevant docs
+- Structured return type with metadata
+- Error handling at action level
+
+---
+
+### **Document Selection UI Pattern**
+
+```typescript
+const [selectedDocs, setSelectedDocs] = useState<Id<"documents">[]>([]);
+
+// Toggle selection
+const toggleDocument = (docId: Id<"documents">) => {
+  setSelectedDocs(prev => 
+    prev.includes(docId)
+      ? prev.filter(id => id !== docId)  // Remove
+      : [...prev, docId]                  // Add
+  );
+};
+
+// Select all
+const selectAllDocuments = () => {
+  if (documents) {
+    setSelectedDocs(documents.map(d => d._id));
+  }
+};
+
+// Clear all
+const deselectAllDocuments = () => {
+  setSelectedDocs([]);
+};
+
+// Auto-select first 5 on mode change
+useEffect(() => {
+  if (mode === "manual" && documents && selectedDocs.length === 0) {
+    setSelectedDocs(
+      documents.slice(0, Math.min(5, documents.length)).map(d => d._id)
+    );
+  }
+}, [documents, mode, selectedDocs.length]);
+```
+
+**UX considerations:**
+- Auto-select first 5 docs in manual mode (convenience)
+- Visual feedback with checkboxes and colors
+- "Select All" / "Clear" buttons for bulk operations
+- Show count: "3 documents selected"
+
+---
+
+## 🎯 Testing Strategies
+
+### **What We Tested:**
+
+✅ **Smart Search Mode:**
+- Asked: "What are some common Metal scales?"
+- Result: Found 1 document, listed 6 scales with descriptions
+- Performance: 8,268ms, 1,267 tokens
+
+✅ **Manual Selection Mode:**
+- Selected: "Music-Related SWE Projects.txt"
+- Asked: "What are some creative music-related projects?"
+- Result: Comprehensive answer with 5 categories
+- Performance: 7,858ms, 1,641 tokens
+
+✅ **Mobile Responsive:**
+- Tested on Samsung Galaxy S20 Ultra viewport
+- Navigation compresses correctly
+- Tabs stack properly
+- Text remains readable
+
+✅ **Error States:**
+- Tested with invalid questions
+- Tested with no documents selected (manual mode)
+- Error messages display correctly with nautical theme
+
+---
+
+## 📊 Performance Learnings
+
+### **Response Times:**
+- **Smart Search:** 8.3 seconds (auto-finding 1 document)
+- **Manual Selection:** 7.9 seconds (1 pre-selected document)
+- **Difference:** ~0.4 seconds (minimal overhead for auto-search)
+
+### **Token Usage:**
+- **Query 1:** 1,267 tokens (general question about scales)
+- **Query 2:** 1,641 tokens (detailed projects explanation)
+- **Pattern:** More complex answers = more tokens
+
+### **Optimization Opportunities:**
+- Cache frequently asked questions
+- Stream responses for better perceived performance
+- Limit document content sent to API (just relevant sections)
+- Implement request queuing to prevent API spam
+
+---
+
+## 🚀 What's Working Really Well
+
+### **1. Brand Consistency**
+Every pixel reflects VELA's nautical identity:
+- Deep Ocean Navy + Teal color scheme
+- Lighthouse metaphor throughout
+- Wave animations (not spinners)
+- Nautical messaging ("Navigate your knowledge")
+- Professional but approachable tone
+
+### **2. Dual-Mode Flexibility**
+Users love having options:
+- Exploratory users → Smart Search
+- Focused users → Manual Selection
+- Both work flawlessly
+- Clear mental model
+
+### **3. Transparency**
+Showing metrics builds trust:
+- Response time visible
+- Token usage displayed
+- Documents searched count
+- Model name shown
+- Source citations clickable
+
+### **4. Mobile Experience**
+Fully responsive from day one:
+- Navigation adapts
+- Tabs work on small screens
+- Text remains readable
+- Touch targets sized properly
+
+---
+
+## 🎓 Lessons for Future Features
+
+### **1. Always Start with File Structure**
+Before coding, verify:
+```powershell
+# Does the folder exist?
+Test-Path "src/app/(dashboard)/lighthouse"
+
+# Is there a page file?
+Test-Path "src/app/(dashboard)/lighthouse/page.tsx"
+
+# What's the file size? (0 = empty = problem)
+(Get-Item "src/components/lighthouse-search.tsx").Length
+```
+
+### **2. Understand Next.js Routing First**
+- Route groups don't add to URL
+- `src/app/` takes precedence over `app/`
+- Page files create routes
+- Layout files wrap children
+- Middleware protects routes
+
+### **3. Test Import Paths Early**
+```powershell
+# Run TypeScript check
+npx tsc --noEmit
+
+# Check for common errors
+# - "Cannot find module" = wrong import path
+# - "implicitly has 'any' type" = missing type definition
+```
+
+### **4. Windows Development Requires Extra Care**
+- Use quotes around paths with special chars
+- Verify files exist on disk (not just VS Code)
+- Learn PowerShell equivalents of Bash commands
+- File encoding matters (UTF-8 vs UTF-16)
+
+---
+
+## 📈 Metrics & Progress
+
+### **Day 14 Stats:**
+- **Lines of Code Written:** 600+ (lighthouse-search.tsx)
+- **Convex Actions Created:** 2 (askQuestion, generateAnswer)
+- **Files Created:** 3 (component + page + updated layout)
+- **Bugs Squashed:** 8+ major issues
+- **Hours Debugging:** ~4 hours (but worth it!)
+- **Features Completed:** 1 massive feature (dual-mode AI Q&A)
+
+### **Cumulative Progress (Days 1-14):**
+- **Total Files:** 50+
+- **Total Lines:** 5,000+
+- **Features Complete:** 6 major features
+- **Days Remaining:** 16 days
+- **Progress:** 47% (ahead of schedule!)
+
+---
+
+## 🔮 What's Next (Day 15-20)
+
+### **Day 15: Polish & Edge Cases**
+- Test with 10+ documents
+- Handle API failures gracefully
+- Add copy-to-clipboard button
+- Improve loading states
+- Mobile testing on real devices
+
+### **Days 16-20: LAMINAR Algorithm**
+- Document clustering (find related docs)
+- Temporal patterns (what's searched together)
+- Cross-document intelligence
+- Butterfly effect predictions
+- Fractal wisdom extraction
+
+**The foundation is solid. Now we add the magic! 🌟**
+
+---
+
+## 💎 Key Takeaways
+
+1. **Debugging is learning** - Every error teaches something valuable
+2. **File systems matter** - Always verify files exist on disk
+3. **Route groups are powerful** - Use them for shared layouts
+4. **Convex must run first** - Generated types are essential
+5. **Windows needs special care** - PowerShell ≠ Bash
+6. **Brand consistency pays off** - Every detail matters
+7. **Dual modes serve different users** - Flexibility wins
+8. **Transparency builds trust** - Show metrics, cite sources
+9. **Mobile is not optional** - Test responsive from day one
+10. **Patience wins** - 4 hours of debugging = lifetime of knowledge
+
+---
+
+## 🎊 Celebration Moment
+
+**We built a production-ready AI search feature from scratch!**
+
+Not a tutorial. Not a toy. A **real, working feature** that:
+- ✅ Solves real problems (finding information fast)
+- ✅ Uses production tech (Next.js 16, Convex, Claude)
+- ✅ Looks beautiful (VELA brand throughout)
+- ✅ Works on mobile
+- ✅ Handles errors gracefully
+- ✅ Shows performance transparently
+- ✅ Cites sources properly
+
+**This is portfolio-worthy, investor-demo-ready work!** 🏆
+
+---
+
+## 📝 Updated Developer Notes
+
+### **File Structure:**
+```
+vela/
+├── src/
+│   ├── app/
+│   │   ├── (dashboard)/          # Route group (no URL path)
+│   │   │   ├── layout.tsx        # Shared nav + footer
+│   │   │   ├── lighthouse/
+│   │   │   │   └── page.tsx      # → /lighthouse
+│   │   │   ├── documents/
+│   │   │   │   └── page.tsx      # → /documents
+│   │   │   └── dashboard/
+│   │   │       └── page.tsx      # → /dashboard
+│   │   └── layout.tsx            # Root layout
+│   ├── components/
+│   │   ├── lighthouse-search.tsx # 600+ lines, dual-mode
+│   │   └── ui/                   # Shadcn components
+│   └── middleware.ts             # Clerk auth protection
+├── convex/
+│   ├── ai.ts                     # AI actions (askQuestion, generateAnswer)
+│   ├── documents.ts              # Document queries
+│   └── _generated/               # Auto-generated by Convex
+└── .env.local                    # ANTHROPIC_API_KEY required
+```
+
+### **Environment Variables Required:**
+```env
+ANTHROPIC_API_KEY=sk-ant-...
+NEXT_PUBLIC_CONVEX_URL=https://[deployment].convex.cloud
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+```
+
+### **Startup Commands:**
+```powershell
+# Terminal 1: Convex (must start first!)
+npx convex dev
+
+# Terminal 2: Next.js
+npm run dev
+```
+
+### **Testing Checklist:**
+- [ ] Smart Search returns relevant documents
+- [ ] Manual Selection respects user choices
+- [ ] Error messages display correctly
+- [ ] Loading states animate smoothly
+- [ ] Source citations are clickable
+- [ ] Performance metrics display
+- [ ] Mobile layout works
+- [ ] Navigation links all correct
+
+---
+
+**Day 14 Complete! The LIGHTHOUSE is illuminating! 🔦✨**
+
+*Next: Day 15 - Polish, edge cases, and preparation for LAMINAR chaos theory magic!*
+
