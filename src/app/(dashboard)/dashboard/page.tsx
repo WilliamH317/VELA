@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UserButton } from "@clerk/nextjs";
+import Link from "next/link";
 
 /**
  * Protected Dashboard Page (Server Component)
@@ -33,16 +33,6 @@ export default async function DashboardPage() {
             VELA - your knowledge navigation system
           </p>
         </div>
-        
-        {/* Clerk user button (profile menu) */}
-        <UserButton 
-          afterSignOutUrl="/"
-          appearance={{
-            elements: {
-              avatarBox: "w-12 h-12",
-            },
-          }}
-        />
       </div>
 
       {/* Quick actions */}
@@ -57,9 +47,11 @@ export default async function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="w-full bg-[#00BCD4] hover:bg-[#00ACC1]">
-              Upload
-            </Button>
+            <Link href="/documents/new">
+              <Button className="w-full bg-[#00BCD4] hover:bg-[#00ACC1]">
+                Upload
+              </Button>
+            </Link>
           </CardContent>
         </Card>
 
@@ -73,12 +65,14 @@ export default async function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button 
-              variant="outline" 
-              className="w-full border-[#1B3D5C] text-[#1B3D5C] hover:bg-[#1B3D5C] hover:text-white"
-            >
-              Search
-            </Button>
+            <Link href="/search">
+              <Button 
+                variant="outline" 
+                className="w-full border-[#1B3D5C] text-[#1B3D5C] hover:bg-[#1B3D5C] hover:text-white"
+              >
+                Search
+              </Button>
+            </Link>
           </CardContent>
         </Card>
 
@@ -92,12 +86,14 @@ export default async function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button 
-              variant="outline" 
-              className="w-full border-[#00BCD4] text-[#00BCD4] hover:bg-[#00BCD4] hover:text-white"
-            >
-              Ask
-            </Button>
+            <Link href="/lighthouse">
+              <Button 
+                variant="outline" 
+                className="w-full border-[#00BCD4] text-[#00BCD4] hover:bg-[#00BCD4] hover:text-white"
+              >
+                Ask
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>

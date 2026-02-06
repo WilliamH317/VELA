@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, Calendar, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { use } from "react";
+import { BackNav } from "@/components/back-nav";
 
 export default function DocumentPage({
   params,
@@ -25,6 +26,7 @@ export default function DocumentPage({
   if (document === undefined) {
     return (
       <div className="container mx-auto max-w-4xl p-6">
+        <BackNav href="/documents" label="Back to Knowledge Library" />
         <div className="flex flex-col items-center justify-center py-16">
           <div className="relative w-64 h-2 bg-[#1B3D5C]/10 rounded-full overflow-hidden">
             <div 
@@ -84,13 +86,7 @@ export default function DocumentPage({
   return (
     <div className="container mx-auto max-w-4xl p-6">
       {/* Back button */}
-      <Link 
-        href="/search"
-        className="inline-flex items-center gap-2 text-sm text-[#1B3D5C] hover:text-[#00BCD4] mb-6 transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to COMPASS
-      </Link>
+      <BackNav href="/documents" label="Back to Knowledge Library" />
       
       {/* Document Card */}
       <Card className="p-8 border-[#1B3D5C]/20">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery, useAction } from "convex/react";
+import { useQuery, useAction, useConvexAuth } from "convex/react";
 import { api } from "convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -63,7 +63,12 @@ export function LighthouseSearch() {
   // ========================================
   // Convex Hooks
   // ========================================
-  const documents = useQuery(api.documents.list);
+  const { isAuthenticated } = useConvexAuth();
+
+  const documents = useQuery(
+    api.documents.list,
+    isAuthenticated ? {} : "skip"
+  );
   const askQuestion = useAction(api.ai.askQuestion);
   const generateAnswer = useAction(api.ai.generateAnswer);
 
@@ -240,7 +245,7 @@ export function LighthouseSearch() {
       <Card className="p-6 border-[#1B3D5C]/20">
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Question Input */}
-          <div className="relative">
+          <div>
             <label className="text-sm font-medium text-[#1B3D5C] mb-2 block">
               Your Question
             </label>
@@ -252,8 +257,37 @@ export function LighthouseSearch() {
               disabled={isLoading}
               maxLength={1000}
             />
-            <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
-              {question.length}/1000
+            {/* Counter + Example Questions */}
+            <div className="flex items-start justify-between gap-4">
+              {/* Example Questions (left side) */}
+              {!response && !isLoading && question.length === 0 ? (
+                <div className="space-y-2 flex-1">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Try these examples:
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {exampleQuestions.map((exampleQ, idx) => (
+                      <Button
+                        key={idx}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleExampleQuestion(exampleQ)}
+                        className="text-xs border-[#00BCD4]/30 text-[#00BCD4] hover:bg-[#00BCD4]/10"
+                      >
+                        {exampleQ}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1" />
+              )}
+              
+              {/* Character counter (right side) */}
+              <span className="text-xs text-muted-foreground pt-1 flex-shrink-0">
+                {question.length}/1000
+              </span>
             </div>
           </div>
 
@@ -339,29 +373,6 @@ export function LighthouseSearch() {
                   </Button>
                 </Card>
               )}
-            </div>
-          )}
-
-          {/* Example Questions */}
-          {!response && !isLoading && question.length === 0 && (
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">
-                Try these examples:
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {exampleQuestions.map((exampleQ, idx) => (
-                  <Button
-                    key={idx}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExampleQuestion(exampleQ)}
-                    className="text-xs border-[#00BCD4]/30 text-[#00BCD4] hover:bg-[#00BCD4]/10"
-                  >
-                    {exampleQ}
-                  </Button>
-                ))}
-              </div>
             </div>
           )}
 

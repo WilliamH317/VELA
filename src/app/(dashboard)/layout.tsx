@@ -18,16 +18,15 @@ export default function DashboardLayout({
             {/* Left Side: Logo + Navigation Links */}
             <div className="flex items-center gap-8">
               {/* VELA Logo */}
-              <Link 
-                href="/dashboard" 
+              <Link
+                href="/dashboard"
                 className="text-xl font-bold text-[#1B3D5C] hover:text-[#00BCD4] transition-colors"
               >
                 VELA
               </Link>
-              
-              {/* Navigation Links */}
+
+              {/* Desktop Navigation Links */}
               <div className="hidden md:flex gap-1">
-                {/* Dashboard/HELM */}
                 <Link
                   href="/dashboard"
                   className="px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-[#1B3D5C] hover:bg-[#1B3D5C]/5 transition-colors flex items-center gap-2"
@@ -36,16 +35,14 @@ export default function DashboardLayout({
                   <span>HELM</span>
                 </Link>
 
-                {/* Documents */}
                 <Link
                   href="/documents"
                   className="px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-[#1B3D5C] hover:bg-[#1B3D5C]/5 transition-colors flex items-center gap-2"
                 >
                   <FileText className="h-4 w-4" />
-                  <span>Documents</span>
+                  <span>DOCUMENTS</span>
                 </Link>
 
-                {/* Upload/PORT */}
                 <Link
                   href="/upload"
                   className="px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-[#1B3D5C] hover:bg-[#1B3D5C]/5 transition-colors flex items-center gap-2"
@@ -54,7 +51,6 @@ export default function DashboardLayout({
                   <span>PORT</span>
                 </Link>
 
-                {/* Search/COMPASS */}
                 <Link
                   href="/search"
                   className="px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-[#1B3D5C] hover:bg-[#1B3D5C]/5 transition-colors flex items-center gap-2"
@@ -63,7 +59,6 @@ export default function DashboardLayout({
                   <span>COMPASS</span>
                 </Link>
 
-                {/* 🆕 LIGHTHOUSE - Featured with Gradient */}
                 <Link
                   href="/lighthouse"
                   className="px-3 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-[#1B3D5C] to-[#00BCD4] text-white hover:shadow-md hover:shadow-[#00BCD4]/20 transition-all flex items-center gap-2"
@@ -76,7 +71,7 @@ export default function DashboardLayout({
 
             {/* Right Side: User Button */}
             <div className="flex items-center gap-4">
-              <UserButton 
+              <UserButton
                 afterSignOutUrl="/"
                 appearance={{
                   elements: {
@@ -87,46 +82,27 @@ export default function DashboardLayout({
             </div>
           </div>
 
-          {/* Mobile Navigation (appears on smaller screens) */}
-          <div className="md:hidden pb-3 flex gap-1 overflow-x-auto">
-            <Link
-              href="/dashboard"
-              className="px-3 py-2 rounded-lg text-xs font-medium text-gray-600 hover:text-[#1B3D5C] hover:bg-[#1B3D5C]/5 transition-colors flex items-center gap-2 whitespace-nowrap"
-            >
-              <Home className="h-3 w-3" />
-              <span>HELM</span>
+          {/* Mobile Navigation */}
+          <div className="md:hidden pb-2 flex justify-around">
+            <Link href="/dashboard" className="flex flex-col items-center gap-1 px-2 py-1 text-gray-600 hover:text-[#1B3D5C] transition-colors">
+              <Home className="h-5 w-5" />
+              <span className="text-[10px] font-medium">HELM</span>
             </Link>
-
-            <Link
-              href="/documents"
-              className="px-3 py-2 rounded-lg text-xs font-medium text-gray-600 hover:text-[#1B3D5C] hover:bg-[#1B3D5C]/5 transition-colors flex items-center gap-2 whitespace-nowrap"
-            >
-              <FileText className="h-3 w-3" />
-              <span>Documents</span>
+            <Link href="/documents" className="flex flex-col items-center gap-1 px-2 py-1 text-gray-600 hover:text-[#1B3D5C] transition-colors">
+              <FileText className="h-5 w-5" />
+              <span className="text-[10px] font-medium">DOCS</span>
             </Link>
-
-            <Link
-              href="/upload"
-              className="px-3 py-2 rounded-lg text-xs font-medium text-gray-600 hover:text-[#1B3D5C] hover:bg-[#1B3D5C]/5 transition-colors flex items-center gap-2 whitespace-nowrap"
-            >
-              <Upload className="h-3 w-3" />
-              <span>PORT</span>
+            <Link href="/upload" className="flex flex-col items-center gap-1 px-2 py-1 text-gray-600 hover:text-[#1B3D5C] transition-colors">
+              <Upload className="h-5 w-5" />
+              <span className="text-[10px] font-medium">PORT</span>
             </Link>
-
-            <Link
-              href="/search"
-              className="px-3 py-2 rounded-lg text-xs font-medium text-gray-600 hover:text-[#1B3D5C] hover:bg-[#1B3D5C]/5 transition-colors flex items-center gap-2 whitespace-nowrap"
-            >
-              <Search className="h-3 w-3" />
-              <span>COMPASS</span>
+            <Link href="/search" className="flex flex-col items-center gap-1 px-2 py-1 text-gray-600 hover:text-[#1B3D5C] transition-colors">
+              <Search className="h-5 w-5" />
+              <span className="text-[10px] font-medium">COMPASS</span>
             </Link>
-
-            <Link
-              href="/lighthouse"
-              className="px-3 py-2 rounded-lg text-xs font-medium bg-gradient-to-r from-[#1B3D5C] to-[#00BCD4] text-white hover:shadow-md transition-all flex items-center gap-2 whitespace-nowrap"
-            >
-              <Lightbulb className="h-3 w-3" />
-              <span>LIGHTHOUSE</span>
+            <Link href="/lighthouse" className="flex flex-col items-center gap-1 px-2 py-1 text-[#00BCD4] transition-colors">
+              <Lightbulb className="h-5 w-5" />
+              <span className="text-[10px] font-medium">LIGHT</span>
             </Link>
           </div>
         </div>
@@ -140,15 +116,12 @@ export default function DashboardLayout({
       </main>
 
       {/* ========================================
-          FOOTER (Optional)
+          FOOTER
           ======================================== */}
       <footer className="border-t border-[#1B3D5C]/10 bg-white/50 mt-auto">
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-[#1B3D5C]">VELA</span>
-              <span>•</span>
-              <span>Navigate Your Knowledge</span>
             </div>
             <div className="flex items-center gap-4">
               <span>© 2026 VELA</span>

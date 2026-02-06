@@ -39,13 +39,14 @@ export default function SearchPage() {
       </div>
       
       {/* Search Input */}
-      <div className="relative mb-8">
+      <div className="relative mb-8 mx-auto" style={{ maxWidth: '576px' }}>
         <Compass className="absolute left-4 top-4 h-5 w-5 text-[#00BCD4]" />
         <Input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="What does your COMPASS seek?"
-          className="pl-12 h-14 text-lg border-2 border-[#1B3D5C]/20 focus:border-[#00BCD4] focus:ring-[#00BCD4] transition-colors"
+          className="h-14 text-lg border-2 border-[#1B3D5C]/20 focus:border-[#00BCD4] focus:ring-[#00BCD4] transition-colors"
+          style={{ paddingLeft: '4rem' }}
           autoFocus
         />
       </div>

@@ -6,6 +6,7 @@ import { UploadZone } from "@/components/upload-zone";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Ship, Search, Lightbulb } from "lucide-react";
+import { BackNav } from "@/components/back-nav";
 
 export default function NewDocumentPage() {
   const router = useRouter();
@@ -17,17 +18,9 @@ export default function NewDocumentPage() {
 
   return (
     <div className="container mx-auto max-w-4xl p-6">
+      <BackNav href="/documents" label="Back to Knowledge Library" />
       {/* Header */}
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          onClick={() => router.push("/documents")}
-          className="text-[#1B3D5C] hover:text-[#00BCD4] mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Knowledge Library
-        </Button>
-        
+      <div className="mb-6">        
         <div className="flex items-center gap-3 mb-2">
           <Ship className="h-8 w-8 text-[#00BCD4]" />
           <h1 className="text-3xl font-bold text-[#1B3D5C]">

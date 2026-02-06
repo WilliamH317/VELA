@@ -248,17 +248,15 @@ export default function DocumentsPage() {
                   {/* Action Button */}
                   <div className="flex-shrink-0">
                     {doc.status === "ready" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-[#1B3D5C] text-[#1B3D5C] hover:bg-[#1B3D5C] hover:text-white"
-                        onClick={() => {
-                          // TODO: Navigate to document view (Day 12+)
-                          console.log("View document:", doc._id);
-                        }}
-                      >
-                        View
-                      </Button>
+                      <Link href={`/documents/${doc._id}`}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-[#1B3D5C] text-[#1B3D5C] hover:bg-[#1B3D5C] hover:text-white"
+                        >
+                          View
+                        </Button>
+                      </Link>
                     )}
                     
                     {doc.status === "error" && (
