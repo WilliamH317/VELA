@@ -1,13 +1,13 @@
-# 🚢 VELA - Navigate Your Knowledge
+# 🚢 VELA — Navigate Your Knowledge
 
-**AI-Powered Knowledge Management Platform**  
+**AI-Powered Knowledge Management Platform**
 *Transform scattered information into instant answers using chaos theory and AI*
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.1.3-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![Convex](https://img.shields.io/badge/Convex-Real--time-orange?style=flat-square)](https://convex.dev/)
 [![Claude](https://img.shields.io/badge/Claude-Sonnet%204-blue?style=flat-square)](https://anthropic.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-[![Status](https://img.shields.io/badge/Status-Day%2014%2F30-success?style=flat-square)](https://github.com/yourusername/vela)
+[![Status](https://img.shields.io/badge/Status-Day%2016%2F30-success?style=flat-square)](https://github.com/yourusername/vela)
 
 ---
 
@@ -21,85 +21,137 @@ VELA is an AI-powered knowledge management platform that helps knowledge workers
 
 ## ✨ Features
 
-### **🔦 LIGHTHOUSE** - AI-Powered Q&A *(NEW - Day 14)*
+### 🏝️ ARCHIPELAGOS — Self-Organizing Knowledge *(NEW — Day 16)*
+Documents organize themselves into knowledge clusters powered by **LAMINAR**, VELA's chaos theory algorithm:
+- **Auto-Clustering**: Upload 3+ documents and VELA discovers topic groups automatically — no folders needed
+- **Probabilistic Membership**: Each document gets a confidence score across all clusters (not binary assignment)
+- **Bridge Detection**: Documents spanning multiple clusters are flagged as knowledge bridges
+- **Coherence Scoring**: Each cluster displays internal consistency metrics
+- **Pure TypeScript ML**: TF-IDF + K-Means++ + softmax confidence — zero external dependencies
+- **Pipeline Performance**: 202ms for 7 documents, 835 terms
+
+### 🔦 LIGHTHOUSE — AI-Powered Q&A *(Day 13-15)*
 Ask natural language questions and get intelligent answers from your knowledge base:
 - **Smart Search Mode**: AI automatically finds the 5 most relevant documents
 - **Manual Selection Mode**: Choose specific documents to search
 - **Source Citations**: Every answer links back to source documents
 - **Performance Metrics**: Transparent token usage, response time, and document counts
-- **Beautiful UI**: VELA nautical branding with gradient lighthouse icon
+- **Streaming Responses**: Real-time answer generation with Claude API
 
-### **📚 Document Management** - Upload & Organize *(Day 11-12)*
-- Upload PDFs, text files, and markdown documents
-- Automatic full-text indexing with Convex search
-- Real-time synchronization across all devices
-- Document type badges and metadata display
-
-### **🧭 COMPASS** - Full-Text Search *(Day 12)*
+### 🧭 COMPASS — Full-Text Search *(Day 11-12)*
 - Lightning-fast search across all your documents
 - Instant results with content previews
 - Filter by document type
-- Highlight matching text
+- Real-time result updates via WebSocket
 
-### **🔐 Secure Authentication** - Clerk Integration *(Day 8)*
+### 📦 PORT — Document Upload *(Day 9-10)*
+- Drag-and-drop file upload supporting PDF, TXT, and Markdown
+- Automatic full-text indexing with Convex search
+- Server-side PDF text extraction
+- Real-time synchronization across all devices
+
+### 🔐 Secure Authentication — Clerk Integration *(Day 7-8)*
 - Multi-provider sign-in (Google, GitHub, Email)
 - Protected routes with middleware
 - Automatic user creation on sign-up
-- Organization/team support ready
+- JWT integration with Convex for data isolation
 
-### **⚡ Real-Time Everything** - Convex Powered *(Day 7-9)*
+### ⚡ Real-Time Everything — Convex Powered *(Day 7-9)*
 - Live updates across browser tabs
 - Multi-device synchronization
-- Optimistic UI updates
-- Type-safe database queries
+- Type-safe database queries with auto-generated types
+- WebSocket subscriptions (never polling)
+
+---
+
+## 🧠 LAMINAR Algorithm
+
+**LAMINAR** (Latent Association Mapping via Intelligent Natural-language Analysis and Retrieval) applies chaos theory principles to knowledge management. It's VELA's competitive moat — documents organize themselves without folders, tags, or manual categorization.
+
+### How It Works
+
+```
+Documents → TF-IDF Vectorization → K-Means++ Clustering → Confidence Scoring → ARCHIPELAGOS
+```
+
+1. **TF-IDF Vectorization** — Converts document text into numerical vectors using sublinear term frequency (`1 + log(tf)`) and smoothed inverse document frequency (`log(N / (1 + df))`). L2 normalized for cosine similarity.
+2. **K-Means++ Clustering** — Groups similar documents using smart centroid initialization. Silhouette method selects optimal K from 2 to `min(10, √N)`. Seeded PRNG ensures reproducible results.
+3. **Probabilistic Confidence** — Softmax over negated distances converts cluster distances into a full probability distribution. Documents near cluster boundaries are flagged as "bridges" (ambiguity threshold: 15%).
+4. **Real-Time Display** — Clusters update live via Convex WebSocket subscriptions. Expand any cluster to see member documents ranked by membership probability.
+
+### LAMINAR Stages
+
+| Stage | Name | Status | Description |
+|-------|------|--------|-------------|
+| 1 | **ARCHIPELAGOS** | ✅ Live | Self-organizing document clusters |
+| 2 | **CURRENTS** | 📋 Day 17 | Temporal pattern detection — access trajectories |
+| 3 | **Cross-Document** | 📋 Day 18 | Knowledge graph edges — semantic bridges |
+| 4 | **Butterfly Effect** | 📋 Day 19 | Cascade prediction — change impact analysis |
+| 5 | **Fractal Wisdom** | 📋 Day 20 | Multi-scale pattern recognition |
+
+### Pipeline Stats (First Production Run)
+
+| Metric | Value |
+|--------|-------|
+| Documents Clustered | 7 |
+| TF-IDF Terms Extracted | 835 |
+| Clusters Discovered (K) | 2 |
+| K-Means Iterations | 1 (converged) |
+| Silhouette Score | 0.1531 |
+| Membership Records | 14 |
+| Pipeline Duration | 202ms |
+| External ML Dependencies | 0 |
 
 ---
 
 ## 🏗️ Tech Stack
 
-### **Frontend**
-- **Next.js 16.1.3** - React framework with App Router
-- **TypeScript** - Type-safe development
-- **Shadcn UI** - Accessible component library
-- **Tailwind CSS** - Utility-first styling
-- **Lucide Icons** - Beautiful icon set
+### Frontend
+- **Next.js 16.1.3** — React framework with App Router
+- **React 19** — Server and Client Components
+- **TypeScript** — Strict mode, type-safe development
+- **Shadcn UI** — Accessible component library (Radix UI primitives)
+- **Tailwind CSS** — Utility-first styling with VELA brand colors
+- **Lucide Icons** — Icon set
 
-### **Backend & Database**
-- **Convex** - Real-time backend-as-a-service
-  - Type-safe queries and mutations
-  - Full-text search with indexes
+### Backend & Database
+- **Convex** — Real-time backend-as-a-service
+  - Type-safe queries, mutations, and actions
+  - Full-text search with search indexes
   - File storage for documents
-  - Automatic type generation
+  - Auto-generated TypeScript types
+  - WebSocket subscriptions for live updates
 
-### **AI & Search**
-- **Claude Sonnet 4** (Anthropic) - AI-powered answers
-  - Superior context handling (200K tokens)
-  - Excellent citation accuracy
-  - Ethical AI alignment
-- **Convex Search Indexes** - Fast document retrieval
+### AI
+- **Claude Sonnet 4** (Anthropic) — AI-powered answers
+  - 200K token context window
+  - RAG implementation with document context
+  - Streaming responses with source citations
 
-### **Authentication**
-- **Clerk** - User authentication & management
-  - JWT integration with Convex
-  - Multi-provider support
-  - Organization features
+### LAMINAR Engine
+- **Pure TypeScript** — No Python, no sklearn, no external ML dependencies
+  - TF-IDF vectorization with 127 stop words
+  - K-Means++ with seeded PRNG (mulberry32)
+  - Softmax confidence with numerical stability
+  - Runs natively in Convex runtime
 
-### **Deployment**
-- **Vercel** - Next.js hosting with edge functions
-- **Convex Cloud** - Managed backend deployment
+### Authentication
+- **Clerk** — JWT integration with Convex, multi-provider support
+
+### Deployment
+- **Vercel** — Next.js hosting with edge functions
+- **Convex Cloud** — Managed backend deployment
 
 ---
 
 ## 🚀 Getting Started
 
-### **Prerequisites**
-- Node.js 18+ installed
-- npm or yarn package manager
-- Convex account (free tier available)
-- Clerk account (free tier available)
-- Anthropic API key (Claude)
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+- Accounts: [Convex](https://convex.dev), [Clerk](https://clerk.com), [Anthropic](https://anthropic.com)
 
-### **Installation**
+### Installation
 
 1. **Clone the repository**
 ```bash
@@ -127,22 +179,16 @@ CLERK_JWT_ISSUER_DOMAIN=https://[your-app].clerk.accounts.dev
 
 # Anthropic (Claude API)
 ANTHROPIC_API_KEY=sk-ant-api03-...
+ANTHROPIC_MODEL=claude-sonnet-4-20250514
+ANTHROPIC_MAX_TOKENS=2048
 ```
 
-4. **Initialize Convex**
+4. **Start Convex** (must run first — generates TypeScript types)
 ```bash
 npx convex dev
 ```
 
-This will:
-- Create your Convex deployment
-- Generate database schema
-- Set up indexes
-- Generate TypeScript types
-
-5. **Start the development server**
-
-Open a **second terminal** and run:
+5. **Start Next.js** (in a second terminal)
 ```bash
 npm run dev
 ```
@@ -152,9 +198,7 @@ npm run dev
 http://localhost:3000
 ```
 
-**Important:** You must run **both** Convex and Next.js:
-- Terminal 1: `npx convex dev` (backend)
-- Terminal 2: `npm run dev` (frontend)
+> ⚠️ **Important:** Always start `npx convex dev` before `npm run dev`. Convex generates TypeScript types that Next.js depends on.
 
 ---
 
@@ -163,334 +207,171 @@ http://localhost:3000
 ```
 vela/
 ├── src/
-│   ├── app/                      # Next.js App Router
-│   │   ├── (auth)/              # Authentication routes
-│   │   │   ├── sign-in/
-│   │   │   └── sign-up/
-│   │   ├── (dashboard)/         # Route group (shared layout)
-│   │   │   ├── layout.tsx       # Navigation + footer
-│   │   │   ├── dashboard/
-│   │   │   │   └── page.tsx     # → /dashboard
-│   │   │   ├── lighthouse/
-│   │   │   │   └── page.tsx     # → /lighthouse (AI Q&A)
-│   │   │   ├── documents/
-│   │   │   │   └── page.tsx     # → /documents
-│   │   │   └── search/
-│   │   │       └── page.tsx     # → /search
-│   │   ├── (marketing)/         # Public routes
-│   │   │   └── page.tsx         # → / (landing page)
-│   │   ├── layout.tsx           # Root layout (providers)
-│   │   └── globals.css          # VELA brand colors
+│   ├── app/
+│   │   ├── (auth)/                    # Sign-in / sign-up (public)
+│   │   ├── (dashboard)/               # Protected routes (shared layout)
+│   │   │   ├── layout.tsx             # Navigation bar + footer
+│   │   │   ├── dashboard/page.tsx     # HELM — main dashboard
+│   │   │   ├── documents/page.tsx     # Document list
+│   │   │   ├── upload/page.tsx        # PORT — file upload
+│   │   │   ├── search/page.tsx        # COMPASS — full-text search
+│   │   │   ├── lighthouse/page.tsx    # LIGHTHOUSE — AI Q&A
+│   │   │   └── archipelagos/page.tsx  # ARCHIPELAGOS — cluster visualization
+│   │   ├── (marketing)/page.tsx       # Public landing page
+│   │   ├── layout.tsx                 # Root layout (providers)
+│   │   ├── providers.tsx              # ClerkProvider → ConvexProvider chain
+│   │   └── globals.css                # VELA brand colors
 │   ├── components/
-│   │   ├── lighthouse-search.tsx # AI Q&A component (600+ lines)
-│   │   ├── user-setup.tsx       # Auto user creation
-│   │   └── ui/                  # Shadcn components
-│   ├── lib/
-│   │   └── utils.ts             # Helper functions
-│   └── middleware.ts            # Clerk authentication
+│   │   ├── ui/                        # Shadcn components
+│   │   ├── lighthouse-search.tsx      # AI Q&A component
+│   │   └── user-setup.tsx             # Auto user creation
+│   ├── lib/utils.ts                   # Helper functions
+│   └── middleware.ts                  # Clerk route protection
 │
 ├── convex/
-│   ├── schema.ts                # Database schema
-│   ├── documents.ts             # Document queries/mutations
-│   ├── users.ts                 # User management
-│   ├── ai.ts                    # AI actions (Claude API)
-│   ├── auth.config.ts           # Clerk JWT config
-│   └── _generated/              # Auto-generated types
+│   ├── schema.ts                      # Database schema (7 tables, 21 indexes)
+│   ├── documents.ts                   # Document CRUD + file processing
+│   ├── ai.ts                          # Claude API integration
+│   ├── users.ts                       # User management
+│   ├── queries.ts                     # AI query logging
+│   └── laminar/                       # LAMINAR algorithm engine
+│       ├── tfidf.ts                   # TF-IDF vectorization
+│       ├── kmeans.ts                  # K-Means++ clustering + silhouette
+│       ├── confidence.ts              # Probabilistic membership scoring
+│       ├── engine.ts                  # Pipeline orchestration (Convex action)
+│       └── queries.ts                 # Real-time cluster queries
 │
-├── public/                      # Static assets
-├── .env.local                   # Environment variables (gitignored)
-├── next.config.ts               # Next.js configuration
-├── tailwind.config.ts           # Tailwind + VELA colors
-├── tsconfig.json                # TypeScript configuration
-└── package.json                 # Dependencies
+├── CLAUDE.md                          # AI coding agent context
+├── LEARNING_LOG.md                    # Development progress journal
+└── package.json
 ```
 
 ---
 
 ## 🎨 VELA Brand Identity
 
-### **Color Palette**
-- **Deep Ocean Navy** - `#1B3D5C` (primary backgrounds, text)
-- **Teal** - `#00BCD4` (accents, interactive elements, CTAs)
-- **Gradient** - Navy → Teal for special features (LIGHTHOUSE)
+### Color Palette
+| Color | Hex | Usage |
+|-------|-----|-------|
+| **Deep Ocean Navy** | `#1B3D5C` | Primary backgrounds, headings, text |
+| **Teal** | `#00BCD4` | Accents, interactive elements, CTAs |
+| **Gradient** | Navy → Teal | LAMINAR branding, special features |
 
-### **Nautical Metaphor System**
+### Nautical Metaphor System
 
 | Feature | Nautical Name | Meaning |
 |---------|---------------|---------|
 | Document Upload | **PORT** | Ships arrive at port with cargo |
 | Search | **COMPASS** | Navigation tool for finding direction |
 | AI Answers | **LIGHTHOUSE** | Guiding beacon illuminating knowledge |
+| Document Clusters | **ARCHIPELAGOS** | Related knowledge islands |
 | Related Docs | **CURRENTS** | Ocean flows connecting information |
 | Dashboard | **HELM** | Ship's control center |
 | User | **CAPTAIN** | Commander of their knowledge vessel |
 
-### **Design Principles**
-- **Sophisticated but not corporate** - Professional without being stiff
-- **Intelligent but not cold** - Smart and warm, not robotic
-- **Wave animations** - Never generic spinners
-- **Nautical messaging** - Consistent metaphors throughout
-- **Time-focused copy** - Emphasize seconds saved, not features
-
----
-
-## 🔧 Configuration
-
-### **Convex Schema**
-
-Our database schema includes:
-
-```typescript
-// convex/schema.ts
-export default defineSchema({
-  documents: defineTable({
-    title: v.string(),
-    content: v.string(),
-    contentPlain: v.string(),      // For full-text search
-    userId: v.string(),              // Clerk user ID
-    type: v.union(
-      v.literal("pdf"),
-      v.literal("text"),
-      v.literal("markdown")
-    ),
-    fileId: v.optional(v.id("_storage")),
-    metadata: v.object({
-      source: v.string(),
-      uploadedAt: v.number(),
-      size: v.number(),
-    }),
-    tags: v.array(v.string()),
-    isPublic: v.boolean(),
-    status: v.union(
-      v.literal("processing"),
-      v.literal("ready"),
-      v.literal("error")
-    ),
-  })
-    .index("by_user", ["userId"])
-    .index("by_user_and_type", ["userId", "type"])
-    .searchIndex("search_content", {
-      searchField: "contentPlain",
-      filterFields: ["userId", "type", "isPublic"],
-    }),
-    
-  users: defineTable({
-    userId: v.string(),              // Clerk user ID
-    email: v.string(),
-    name: v.optional(v.string()),
-    createdAt: v.number(),
-  }).index("by_userId", ["userId"]),
-});
-```
-
-### **Clerk Configuration**
-
-Middleware protects routes:
-```typescript
-// src/middleware.ts
-const isProtectedRoute = createRouteMatcher([
-  '/dashboard(.*)',
-  '/documents(.*)',
-  '/lighthouse(.*)',
-  '/search(.*)',
-]);
-
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-]);
-```
+### Design Principles
+- Wave animations for loading states (never spinners)
+- "Still waters" for empty states, "Stormy seas" for errors
+- Nautical messaging throughout — no corporate jargon
+- Time-focused copy — emphasize seconds saved, not features
+- Mobile-first responsive design
 
 ---
 
 ## 📊 30-Day MVP Sprint Progress
 
-### **Phase 1: Foundation (Days 1-10)** ✅ COMPLETE
-- [x] JavaScript async/await mastery
-- [x] Next.js 14 infrastructure
-- [x] Convex database setup
-- [x] Clerk authentication
-- [x] First real-time feature
-- [x] Infrastructure checkpoint
+```
+Phase 1: FOUNDATION (Days 1-5)        ████████████████████ 100% ✅
+Phase 2: INFRASTRUCTURE (Days 6-8)    ████████████████████ 100% ✅
+Phase 3: CORE FEATURES (Days 9-15)    ████████████████████ 100% ✅
+Phase 4: DIFFERENTIATION (Days 16-20) ████░░░░░░░░░░░░░░░░  20% 🚧
+Phase 5: POLISH & BILLING (Days 21-25)                          🔒
+Phase 6: LAUNCH (Days 26-30)                                    🔒
+```
 
-### **Phase 2: Core Features (Days 11-15)** ✅ 80% COMPLETE
-- [x] Document upload with file handling (Day 11)
-- [x] Full-text search with indexes (Day 12)
-- [x] Claude API integration (Day 13)
-- [x] AI-powered Q&A - LIGHTHOUSE (Day 14)
-- [ ] Polish & edge case testing (Day 15)
+**Current Progress: Day 16/30 (53%)**
 
-### **Phase 3: LAMINAR Algorithm (Days 16-20)** 📋 UPCOMING
-- [ ] Self-organizing document clusters
-- [ ] Temporal pattern detection
-- [ ] Cross-document intelligence
-- [ ] Butterfly effect predictions
-- [ ] Fractal wisdom extraction
+### What's Built
+- [x] JavaScript async/await mastery (Days 1-5)
+- [x] Next.js 16 + React 19 infrastructure (Day 6)
+- [x] Convex real-time database + Clerk authentication (Days 7-8)
+- [x] PORT — document upload with PDF extraction (Days 9-10)
+- [x] COMPASS — full-text search with real-time results (Days 11-12)
+- [x] LIGHTHOUSE — AI Q&A with streaming + citations (Days 13-15)
+- [x] LAMINAR Stage 1 — ARCHIPELAGOS clustering (Day 16)
 
-### **Phase 4: Launch Prep (Days 21-30)** 📋 PLANNED
-- [ ] Stripe billing integration
-- [ ] Analytics dashboard
-- [ ] Marketing landing page
-- [ ] Documentation & help center
-- [ ] Product Hunt launch
-
-**Current Progress: Day 14/30 (47%)**
+### What's Next
+- [ ] LAMINAR Stage 2 — CURRENTS temporal patterns (Day 17)
+- [ ] LAMINAR Stage 3 — Cross-document intelligence (Day 18)
+- [ ] LAMINAR Stage 4 — Butterfly effect prediction (Day 19)
+- [ ] LAMINAR Stage 5 — Fractal wisdom extraction (Day 20)
+- [ ] UI/UX polish + accessibility (Days 21-22)
+- [ ] Stripe billing integration (Days 23-24)
+- [ ] Product Hunt launch (Day 30)
 
 ---
 
-## 🎯 Roadmap
+## 💰 Pricing (Planned)
 
-### **Immediate (Days 15-20)**
-- [ ] Edge case testing for LIGHTHOUSE
-- [ ] Document upload progress indicators
-- [ ] Copy-to-clipboard for answers
-- [ ] LAMINAR Phase 1: Document clustering
-- [ ] Related documents sidebar
-
-### **Near-term (Days 21-25)**
-- [ ] Billing with Stripe
-- [ ] Usage analytics
-- [ ] Team/organization features
-- [ ] Email notifications
-- [ ] Export functionality
-
-### **Launch (Days 26-30)**
-- [ ] Marketing site redesign
-- [ ] Product demo video
-- [ ] Documentation site
-- [ ] Beta user onboarding
-- [ ] Product Hunt launch 🚀
-
-### **Post-MVP (Q1 2026)**
-- [ ] Integration with Slack
-- [ ] Integration with Google Drive
-- [ ] Mobile apps (iOS/Android)
-- [ ] Chrome extension
-- [ ] API for developers
+| Tier | Price | Documents | Queries | LAMINAR |
+|------|-------|-----------|---------|---------|
+| **Free** | $0 | 10 | 20/month | — |
+| **Starter** | $10/mo | 100 | Unlimited | — |
+| **Pro** | $25/mo | Unlimited | Unlimited | ✅ Full access |
 
 ---
 
-## 🧪 Testing
+## 🔧 Database Schema
 
-### **Manual Testing Checklist**
+7 tables with 21 indexes:
 
-**LIGHTHOUSE (AI Q&A):**
-- [ ] Smart Search finds relevant documents
-- [ ] Manual Selection respects user choices
-- [ ] Error messages display correctly
-- [ ] Loading animations work smoothly
-- [ ] Source citations are clickable
-- [ ] Performance metrics display accurately
-- [ ] Mobile layout works properly
+| Table | Purpose |
+|-------|---------|
+| `users` | User profiles (synced from Clerk) |
+| `documents` | Uploaded documents with full-text search |
+| `queries` | AI query logging for analytics |
+| `clusteringRuns` | LAMINAR pipeline execution records |
+| `clusters` | ARCHIPELAGOS with centroids + keywords |
+| `clusterMemberships` | Probabilistic doc-to-cluster membership |
+| `clusterHistory` | Cluster evolution snapshots (Day 17+) |
 
-**Document Upload:**
-- [ ] File types validated (PDF, TXT, MD)
-- [ ] Upload progress shown
-- [ ] Success states clear
-- [ ] Error handling works
-- [ ] Documents appear in list immediately
+---
 
-**Search (COMPASS):**
-- [ ] Instant search as you type
-- [ ] Results highlight query terms
-- [ ] Empty state messaging
-- [ ] Filter by document type works
+## 📈 Performance Benchmarks
 
-**Authentication:**
-- [ ] Sign in with Google works
-- [ ] Sign up flow completes
-- [ ] Protected routes redirect
-- [ ] User data persists
-
-### **Performance Benchmarks**
-
-**Current Metrics (Day 14):**
-- LIGHTHOUSE Response Time: 7-9 seconds
-- Search Results: <100ms
-- Document Upload: 1-3 seconds
-- Page Load (First Visit): 1-2 seconds
-- Page Load (Cached): <500ms
+| Metric | Value |
+|--------|-------|
+| LIGHTHOUSE Response Time | 7-9 seconds |
+| COMPASS Search Results | <100ms |
+| Document Upload | 1-3 seconds |
+| LAMINAR Pipeline (7 docs) | 202ms |
+| Page Load (First Visit) | 1-2 seconds |
+| Page Load (Cached) | <500ms |
 
 ---
 
 ## 🐛 Known Issues
 
-### **In Progress**
-- [ ] Document upload page not yet built (coming Day 15)
-- [ ] No pagination for large document lists
-- [ ] LIGHTHOUSE doesn't support PDF highlighting yet
-- [ ] No keyboard shortcuts for navigation
-
-### **Backlog**
-- [ ] Need "empty trash" functionality
-- [ ] Document versioning not implemented
-- [ ] No collaborative features yet
-- [ ] Missing dark mode support
-
----
-
-## 🤝 Contributing
-
-VELA is currently in private development (30-day MVP sprint). 
-
-**Interested in contributing after launch?**
-- 📧 Email: will@vela.ai
-- 🐦 Twitter: @vela_ai
-- 💼 LinkedIn: [Will's Profile]
-
----
-
-## 📖 Documentation
-
-### **For Users**
-- [Getting Started Guide](./docs/getting-started.md) *(Coming Day 26)*
-- [LIGHTHOUSE User Guide](./docs/lighthouse.md) *(Coming Day 15)*
-- [Keyboard Shortcuts](./docs/shortcuts.md) *(Coming Day 20)*
-
-### **For Developers**
-- [Architecture Overview](./docs/architecture.md)
-- [Convex Schema Guide](./docs/convex-schema.md)
-- [Contributing Guidelines](./docs/contributing.md) *(Coming post-launch)*
-- [API Documentation](./docs/api.md) *(Coming Q1 2026)*
-
----
-
-## 📝 License
-
-Copyright © 2026 VELA. All rights reserved.
-
-This project is currently in private development. License will be determined at public launch.
-
----
-
-## 🙏 Acknowledgments
-
-### **Technologies**
-- [Next.js](https://nextjs.org/) - React framework
-- [Convex](https://convex.dev/) - Real-time backend
-- [Anthropic Claude](https://anthropic.com/) - AI-powered answers
-- [Clerk](https://clerk.com/) - Authentication
-- [Shadcn UI](https://ui.shadcn.com/) - Component library
-- [Tailwind CSS](https://tailwindcss.com/) - Styling
-- [Vercel](https://vercel.com/) - Deployment
-
-### **Inspiration**
-- Chaos theory principles for self-organizing systems
-- Nautical navigation metaphors for knowledge discovery
-- Musicians' workflow challenges (beachhead market)
+- Silhouette score is low (~15%) with small corpora (<10 documents) — expected, improves with more documents
+- No pagination for large document lists
+- LIGHTHOUSE doesn't support PDF highlighting yet
+- No dark mode support yet
 
 ---
 
 ## 📊 Stats
 
-- **Development Started:** January 19, 2026
-- **Current Day:** 14 of 30
-- **Lines of Code:** 5,000+
-- **Files Created:** 50+
-- **Features Shipped:** 6 major features
-- **Bugs Squashed:** 50+
-- **Coffee Consumed:** ☕☕☕☕☕☕☕☕☕☕☕☕☕☕ (infinite)
+| Metric | Value |
+|--------|-------|
+| Development Started | January 19, 2026 |
+| Current Day | 16 of 30 |
+| Sprint Progress | 53% |
+| Features Shipped | 6 major (PORT, COMPASS, LIGHTHOUSE, Documents, Auth, ARCHIPELAGOS) |
+| Convex Tables | 7 |
+| Convex Indexes | 21 |
+| LAMINAR Algorithm Files | 5 (tfidf, kmeans, confidence, engine, queries) |
+| External ML Dependencies | 0 |
+| Days Until Launch | 14 |
 
 ---
 
@@ -498,41 +379,33 @@ This project is currently in private development. License will be determined at 
 
 **Mission:** Give knowledge workers their time back by instantly connecting them with answers, wherever those answers live.
 
-**Vision:** A world where no question goes unanswered because you can't find what you already know.
-
-**Core Values:**
-- **Speed** - Seconds, not hours
-- **Intelligence** - AI that actually helps
-- **Transparency** - Show how it works
-- **Beauty** - Design matters
-- **Ethics** - Respect user privacy
+**Vision:** A world where no question goes unanswered because you can't find what you already know — where teams across every industry have instant access to collective wisdom through self-organizing intelligence that learns from how they work.
 
 **Beachhead Market:** Musicians (creative knowledge workers with non-linear workflows)
 
-**Expansion Path:** Customer support → Sales → Medical → Legal → 11 additional verticals
+**Expansion Path:** Customer Support → Sales → Medical → Legal → 11+ additional verticals
+
+**Cross-Vertical Intelligence:** Each new vertical makes LAMINAR smarter for ALL verticals. Pattern transfer across domains creates an insurmountable data flywheel.
 
 ---
 
 ## 💬 Contact
 
-**William Horton** - Solo Founder & Developer
+**William Horton** — Solo Founder & Developer
 
 - 📧 Email: whorton@vela.ai
 - 🌐 Website: vela.ai *(Coming Day 26)*
-- 🐦 Twitter: @vela_ai *(Coming Day 25)*
-- 💼 LinkedIn: [Will's Profile]
 
 ---
 
 ## ⚓ Navigate Your Knowledge
 
-**VELA** - Stop searching. Start navigating.
+**VELA** — Stop searching. Start navigating.
 
 *Smooth sailing for your knowledge.* 🌊
 
 ---
 
-**Last Updated:** January 31, 2026 (Day 14)  
-**Status:** Active Development - 47% Complete  
-**Next Milestone:** Day 15 - LIGHTHOUSE Polish & Testing
-
+**Last Updated:** February 13, 2026 (Day 16)
+**Status:** Active Development — 53% Complete
+**Next Milestone:** Day 17 — LAMINAR Stage 2 (CURRENTS)

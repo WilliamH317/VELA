@@ -147,4 +147,85 @@ export default defineSchema({
     .index("by_user", ["userId"])          // Get user's query history
     .index("by_timestamp", ["timestamp"])  // Sort queries by date
     .index("by_user_and_timestamp", ["userId", "timestamp"]), // User's recent queries
+
+  // ============================================================
+  // === LAMINAR TABLES (Day 16) — ARCHIPELAGOS Self-Organization
+  // ============================================================
+  // 🌊 LAMINAR Stage 1: Chaos theory-powered document clustering
+  // Documents auto-organize into ARCHIPELAGOS (knowledge islands)
+  // without manual folder creation. Uses TF-IDF + K-Means + softmax
+  // confidence scoring (autonomous systems sensor fusion pattern).
+
+  // === CLUSTERING RUNS ===
+  // Tracks each execution of the LAMINAR algorithm.
+  // One record per time the clustering pipeline runs.
+  clusteringRuns: defineTable({
+    userId: v.string(),                    // Clerk user ID (who triggered clustering)
+    status: v.union(
+      v.literal("running"),                // ⚙️ Pipeline in progress
+      v.literal("completed"),              // ✅ ARCHIPELAGOS charted successfully
+      v.literal("failed")                  // ❌ Stormy seas — pipeline error
+    ),
+    documentCount: v.number(),             // How many documents were clustered
+    clusterCount: v.number(),              // How many ARCHIPELAGOS were discovered
+    silhouetteScore: v.optional(v.number()), // Clustering quality: -1 to +1 (target > 0.3)
+    startedAt: v.number(),                 // Pipeline start timestamp
+    completedAt: v.optional(v.number()),   // Pipeline end timestamp
+    error: v.optional(v.string()),         // Error message if status === "failed"
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_status", ["userId", "status"]),
+
+  // === CLUSTERS (ARCHIPELAGOS) ===
+  // The knowledge islands themselves — each cluster represents a
+  // thematic grouping of documents discovered by LAMINAR.
+  clusters: defineTable({
+    userId: v.string(),                    // Cluster owner
+    runId: v.id("clusteringRuns"),         // Which run produced this cluster
+    name: v.string(),                      // Derived from top keywords (e.g., "mixing & reverb & vocals")
+    description: v.optional(v.string()),   // Optional summary of cluster contents
+    documentCount: v.number(),             // Documents in this ARCHIPELAGO
+    topKeywords: v.array(v.string()),      // Top TF-IDF terms for this cluster
+    centroid: v.array(v.number()),         // TF-IDF centroid vector (for distance calculations)
+    coherenceScore: v.number(),            // Per-cluster silhouette (displayed as "coherence")
+    color: v.optional(v.string()),         // For UI visualization (auto-assigned)
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_run", ["runId"]),
+
+  // === CLUSTER MEMBERSHIPS ===
+  // Probabilistic membership — the key autonomous systems enhancement.
+  // Instead of binary "doc belongs to cluster 3," we store a full
+  // probability distribution: 72% cluster A, 18% cluster B, 10% cluster C.
+  // This is the sensor fusion pattern from EKF navigation systems.
+  clusterMemberships: defineTable({
+    userId: v.string(),                    // For auth filtering
+    documentId: v.id("documents"),         // Which document
+    clusterId: v.id("clusters"),           // Which ARCHIPELAGO
+    runId: v.id("clusteringRuns"),         // Which run produced this membership
+    probability: v.number(),               // 0.0–1.0 from softmax (sensor fusion confidence)
+    isPrimary: v.boolean(),                // Highest probability cluster for this document?
+    isAmbiguous: v.boolean(),              // Top two clusters within 15%? (bridge document)
+    assignedAt: v.number(),
+  })
+    .index("by_document", ["documentId"])  // All clusters a doc belongs to
+    .index("by_cluster", ["clusterId"])    // All docs in a cluster
+    .index("by_user", ["userId"])          // User's memberships
+    .index("by_run", ["runId"]),           // All memberships from a run
+
+  // === CLUSTER HISTORY ===
+  // Tracks how ARCHIPELAGOS evolve over time across clustering runs.
+  // Pre-built for Day 17 (CURRENTS — temporal pattern detection).
+  // "Schema now, logic later" pattern from autonomous systems spec.
+  clusterHistory: defineTable({
+    clusterId: v.id("clusters"),           // Which ARCHIPELAGO
+    runId: v.id("clusteringRuns"),         // Which run snapshot
+    membershipCount: v.number(),           // How many docs at this point in time
+    accessCount: v.number(),               // Total access events (populated Day 17+)
+    coherenceScore: v.number(),            // Cluster quality at this snapshot
+    timestamp: v.number(),                 // When this snapshot was recorded
+  })
+    .index("by_cluster", ["clusterId"])
+    .index("by_cluster_time", ["clusterId", "timestamp"]),
 });

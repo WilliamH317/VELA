@@ -3641,3 +3641,301 @@ npm run dev
 
 *Next: Day 15 - Polish, edge cases, and preparation for LAMINAR chaos theory magic!*
 
+# Day 16 - [2/13/2026]
+
+## 30-Day MVP Sprint Progress Tracker
+
+**Current Status:** Day 16 of 30 (53% Complete)
+**Current Phase:** Differentiation (Days 16-20) — LAMINAR Algorithm
+**Developer:** Will
+**Project:** VELA — AI-Powered Knowledge Management Platform
+**Last Updated:** February 13, 2026
+
+---
+
+## Sprint Overview
+
+```
+Phase 1: FOUNDATION (Days 1-5)        ████████████████████ 100% ✅
+Phase 2: INFRASTRUCTURE (Days 6-8)    ████████████████████ 100% ✅
+Phase 3: CORE FEATURES (Days 9-15)    ████████████████████ 100% ✅
+Phase 4: DIFFERENTIATION (Days 16-20) ████░░░░░░░░░░░░░░░░  20% 🚧 ← CURRENT
+Phase 5: POLISH & BILLING (Days 21-25)                          🔒
+Phase 6: LAUNCH (Days 26-30)                                    🔒
+```
+
+---
+
+## Detailed Daily Log
+
+### Days 1-5: JavaScript & API Foundations ✅
+
+**What I Built:**
+- 5 practice projects mastering async/await patterns
+- API integration with comprehensive error handling
+- State management fundamentals (state → render → update cycle)
+- Claude API integration practice with authentication
+
+**Key Learnings:**
+- Promises and async/await execution flow
+- Try/catch/finally error handling patterns
+- Boolean flag lifecycle for UI state management
+- API rate limiting, retry logic, and exponential backoff
+- JSON parsing and data transformation
+
+**Status:** ✅ Complete — Strong foundation established
+
+---
+
+### Day 6: Next.js Setup ✅
+
+**What I Built:**
+- Next.js 16 with App Router, TypeScript, React 19
+- Shadcn UI components installed and configured with VELA brand colors
+- Professional landing page with nautical theme and mobile responsiveness
+- Route structure: (auth), (dashboard), (marketing)
+
+**Key Learnings:**
+- App Router architecture (route groups, layouts, loading/error boundaries)
+- Server vs. Client Component boundaries ("use client" directive)
+- Tailwind CSS utility-first styling with custom brand colors
+- Shadcn component installation and theming
+
+**Status:** ✅ Complete
+
+---
+
+### Days 7-8: Convex + Clerk Authentication ✅
+
+**What I Built:**
+- Convex installed, configured with multi-vertical schema and search indexes
+- Clerk installed with JWT integration to Convex
+- Protected routes via middleware
+- Automatic user creation on sign-up (UserSetup component)
+- Multi-layer security: middleware + server + database
+- Production-ready authentication flow tested end-to-end
+
+**Key Learnings:**
+- Convex real-time database queries, mutations, and actions
+- TypeScript schema design with `v.*` validators
+- JWT token integration between Clerk and Convex
+- Middleware-based route protection
+- Provider chain pattern: ClerkProvider → ConvexProviderWithClerk → children
+- **Critical:** Must run `npx convex dev` before `npm run dev` to generate type files
+
+**Status:** ✅ Complete
+
+---
+
+### Days 9-10: Document Upload (PORT) ✅
+
+**What I Built:**
+- Drag-and-drop file upload supporting PDF, TXT, MD
+- File validation (type, size limits)
+- Document processing pipeline (processing → ready → error)
+- PDF text extraction with pdf-parse
+- Real-time document list with live updates
+
+**Key Learnings:**
+- Convex file storage (`_storage` table)
+- Convex actions for server-side file processing
+- Upload URL generation and file storage patterns
+- Content extraction strategies per file type
+- Status-based document lifecycle management
+
+**Status:** ✅ Complete
+
+---
+
+### Days 11-12: Search (COMPASS) ✅
+
+**What I Built:**
+- Full-text search with Convex search indexes
+- Real-time search results with instant filtering
+- Search result highlighting and ranking
+- Multi-tab synchronization verified
+
+**Key Learnings:**
+- Convex `searchIndex` configuration and query syntax
+- Full-text search with `withSearchIndex` and filter fields
+- Debounced search input for performance
+- Real-time result updates via WebSocket subscriptions
+
+**Status:** ✅ Complete
+
+---
+
+### Days 13-15: AI Q&A (LIGHTHOUSE) ✅
+
+**What I Built:**
+- Dual-mode AI-powered Q&A system:
+  - Smart Search: AI selects relevant documents automatically
+  - Manual Selection: User chooses specific documents for context
+- Streaming AI responses with source citations
+- Performance metrics display
+- Comprehensive error handling with retry logic
+
+**Key Learnings:**
+- Claude API Messages endpoint with streaming
+- RAG (Retrieval-Augmented Generation) implementation
+- Convex actions for external API calls
+- System prompt engineering for domain-specific answers
+- Citation extraction and source tracking
+- Exponential backoff retry patterns
+- **Critical:** Convex import paths use `convex/_generated/api` (not `@/convex/`)
+
+**Status:** ✅ Complete
+
+---
+
+### Day 16: LAMINAR Stage 1 — ARCHIPELAGOS 🚧✅
+
+**What I Built:**
+- **TF-IDF Vectorization Engine** (`convex/laminar/tfidf.ts`)
+  - Sublinear TF: `1 + log(tf)` with smoothed IDF: `log(N / (1 + df))`
+  - L2 normalization for cosine similarity compatibility
+  - 127 stop words, deterministic vocabulary ordering
+  - Pure TypeScript with Float64Array for performance
+- **K-Means Clustering Engine** (`convex/laminar/kmeans.ts`)
+  - K-Means++ initialization (smart centroid seeding, not random)
+  - Assignment-based convergence detection
+  - Silhouette score evaluation for cluster quality
+  - Automatic K suggestion: K=2 to min(10, floor(√N))
+  - Seeded PRNG (mulberry32) for reproducible results
+- **Probabilistic Confidence Scoring** (`convex/laminar/confidence.ts`)
+  - Softmax over negated distances with numerical stability (max-logit trick)
+  - Sensor fusion pattern from autonomous systems engineering
+  - Ambiguity detection: flags documents spanning cluster boundaries
+  - Temperature parameter controls measurement precision
+- **Orchestration Engine** (`convex/laminar/engine.ts`)
+  - Convex action orchestrating full pipeline: TF-IDF → K selection → K-Means → confidence → storage
+  - 6 internal mutations for database writes (createRun, insertCluster, batchInsertMemberships, etc.)
+  - try/catch wrapping with "failed" run status on error
+  - Explicit return type annotation to break TS7022 circular inference
+- **Real-Time Queries** (`convex/laminar/queries.ts`)
+  - 4 reactive queries: listClusters, getClusterMembers, getClusteringStatus, getDocumentClusters
+  - All queries auth-checked, index-efficient, userId-scoped
+  - Shaped return objects (strips heavy fields like centroids and full content)
+- **ARCHIPELAGOS Page** (`app/(dashboard)/archipelagos/page.tsx`)
+  - Cluster card grid with expand/collapse for member documents
+  - Probability bars and "primary"/"bridge" badges per document
+  - Coherence score progress bars per cluster
+  - All 5 UI states: loading (wave), empty (still waters), error (stormy seas), running, data
+- **4 New Convex Tables:** `clusteringRuns`, `clusters`, `clusterMemberships`, `clusterHistory`
+- **Navigation Updated:** ISLANDS link added to desktop and mobile nav
+
+**Pipeline Results (First Run):**
+- 7 documents clustered in 202ms
+- 835 TF-IDF terms extracted
+- K = 2 suggested (correct for small corpus)
+- K-Means converged in 1 iteration
+- Silhouette score: 0.1531 (expected low with only 7 docs)
+- 14 membership records created (7 docs × 2 clusters)
+
+**Key Learnings:**
+- TF-IDF math: sublinear term frequency prevents long documents from dominating
+- K-Means++ dramatically improves convergence vs. random initialization (converged in 1 iteration)
+- Silhouette score scales with corpus diversity — 7 similar music docs yields ~15%, which is expected
+- Convex actions that reference `internal.*` from the same file MUST have explicit return type annotations (TS7022 circular inference)
+- Assignment-based convergence (did any label change?) is equivalent to centroid-displacement convergence but more robust (no threshold tuning needed)
+- Softmax temperature acts like sensor precision in EKF — lower = sharper cluster boundaries
+- Batch mutations reduce round-trips: one call for all 14 membership records vs. 14 separate calls
+- The "Build While Learning" approach works: reviewed every algorithm line-by-line before integration
+
+**Claude Code Usage:**
+- Algorithm implementations delegated: TF-IDF, K-Means, confidence scoring
+- Manual work: schema design, engine orchestration review, query design, UI brand compliance, integration testing
+- Anti-pattern documented in CLAUDE.md: circular inference fix for co-located actions + internal mutations
+
+**Self-Reliance Check:**
+1. If Claude Code disappeared, could I finish this project? **Yes** — I understand every algorithm
+2. Do I understand the code it generated? **Yes** — reviewed line-by-line against mathematical specs
+3. Can I debug without asking the agent? **Yes** — fixed TS7022 circular inference issue
+4. Have I written significant code manually this week? **Yes** — schema, queries, integration testing
+5. Confidence level: **8/10** — first time implementing ML algorithms in production
+
+**Status:** ✅ Complete — LAMINAR Stage 1 live and verified
+
+---
+
+## Technical Decisions Log
+
+| Day | Decision | Rationale | Outcome |
+|-----|----------|-----------|---------|
+| 1 | Next.js + Convex + Clerk stack | Speed-to-market over premature optimization | ✅ Correct — real-time features "just work" |
+| 6 | App Router (not Pages Router) | Future-proof, Server Components support | ✅ Correct — clean route groups |
+| 8 | `identity.subject` for userId | Clerk's stable identifier in JWT | ✅ Correct — consistent across all queries |
+| 10 | PDF extraction in Convex action | Server-side processing, no client-side deps | ✅ Correct — works with file storage |
+| 13 | Dual-mode LIGHTHOUSE | Users want both auto and manual doc selection | ✅ Correct — power users love manual mode |
+| 16 | Pure TypeScript for LAMINAR | Zero Python deps, runs natively in Convex | ✅ Correct — 202ms pipeline, no cold starts |
+| 16 | Assignment-based convergence | No arbitrary threshold needed | ✅ Correct — converged in 1 iteration |
+| 16 | Seeded PRNG for K-Means++ | Reproducible clustering across runs | ✅ Correct — enables clusterHistory comparison |
+| 16 | Batch mutations for memberships | Reduces Convex round-trips | ✅ Correct — 14 records in one transaction |
+
+---
+
+## Debugging War Stories
+
+### Day 8: The Provider Chain Mystery
+**Problem:** Convex queries returning `undefined` even after authentication
+**Root Cause:** ConvexProviderWithClerk must wrap the entire app, and `npx convex dev` must run first to generate type files
+**Fix:** Correct provider nesting order and startup sequence
+**Time Lost:** 2 hours
+**Lesson:** Always run Convex before Next.js
+
+### Day 14: The Import Path Saga
+**Problem:** Build failures with `@/convex/_generated/api` imports
+**Root Cause:** Convex files live at project root, not in `src/`. The `@/` alias maps to `./src/*`
+**Fix:** Use `convex/_generated/api` (no `@/` prefix)
+**Time Lost:** 1.5 hours
+**Lesson:** Convex has its own path alias in tsconfig
+
+### Day 16: The TS7022 Circular Inference
+**Problem:** `npx convex dev` fails with "implicitly has type 'any'" on the LAMINAR action
+**Root Cause:** Action references `internal.laminar.engine.createRun` from the same file, creating circular type inference
+**Fix:** Add explicit `Promise<ClusteringSummary>` return type annotation to the handler
+**Time Lost:** 15 minutes (recognized the pattern quickly)
+**Lesson:** Convex actions co-located with their internal mutations always need explicit return types. Added to CLAUDE.md anti-patterns.
+
+---
+
+## Metrics
+
+| Metric | Value |
+|--------|-------|
+| Days Completed | 16 / 30 |
+| Sprint Progress | 53% |
+| Features Shipped | 5 (PORT, COMPASS, LIGHTHOUSE, Documents, ARCHIPELAGOS) |
+| Convex Tables | 7 (users, documents, queries, clusteringRuns, clusters, clusterMemberships, clusterHistory) |
+| Total Indexes | 21 |
+| Lines of LAMINAR Code | ~800 (4 algorithm files + queries) |
+| External ML Dependencies | 0 |
+| Pipeline Performance | 202ms for 7 documents |
+| Confidence Level | 8/10 |
+| Days Until Launch | 14 |
+
+---
+
+## What's Next
+
+### Day 17: LAMINAR Stage 2 — Temporal Pattern Detection (CURRENTS)
+- Track document access patterns over time
+- Co-occurrence relationship detection
+- Trajectory-based relevance prediction
+- "Captains who read X also navigated to Y"
+
+### Days 18-20: LAMINAR Stages 3-5
+- Cross-document intelligence (knowledge graph edges)
+- Butterfly effect prediction (cascade analysis)
+- Fractal wisdom distillation (multi-scale patterns)
+
+### Days 21-25: Polish & Billing
+- UI/UX refinement across all features
+- Stripe integration with three-tier pricing
+- Accessibility and performance optimization
+
+### Days 26-30: Launch
+- Product Hunt preparation
+- Documentation and onboarding flow
+- Public launch and first customer acquisition
+
