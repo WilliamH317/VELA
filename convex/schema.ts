@@ -228,4 +228,59 @@ export default defineSchema({
   })
     .index("by_cluster", ["clusterId"])
     .index("by_cluster_time", ["clusterId", "timestamp"]),
+
+  // ADD to convex/schema.ts — inside defineSchema({...})
+
+  // Day 17: Temporal Pattern Detection
+  accessEvents: defineTable({
+    documentId: v.id("documents"),
+    userId: v.string(),
+    sessionId: v.string(),
+    timestamp: v.number(),
+    action: v.union(
+      v.literal("view"),
+      v.literal("search_hit"),
+      v.literal("ai_query"),
+      v.literal("ai_cited")
+    ),
+  })
+    .index("by_user", ["userId"])
+    .index("by_document", ["documentId"])
+    .index("by_user_and_document", ["userId", "documentId"])
+    .index("by_session", ["sessionId"])
+    .index("by_timestamp", ["timestamp"]),
+
+  temporalPatterns: defineTable({
+    userId: v.string(),
+    documentId: v.id("documents"),
+    accessRate: v.number(),           // accesses per day (current window)
+    rateOfChange: v.number(),         // acceleration/deceleration
+    trend: v.union(
+      v.literal("rising"),
+      v.literal("stable"),
+      v.literal("declining"),
+      v.literal("periodic")
+    ),
+    periodicity: v.optional(v.number()),  // days between peaks, if periodic
+    predictedRelevance: v.number(),       // 0-1 score for T+7 prediction
+    lastComputed: v.number(),             // when this pattern was last calculated
+    totalAccesses: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_document", ["documentId"])
+    .index("by_user_and_document", ["userId", "documentId"])
+    .index("by_user_and_trend", ["userId", "trend"]),
+
+  // Co-occurrence: which documents are accessed together?
+  cooccurrences: defineTable({
+    userId: v.string(),
+    documentA: v.id("documents"),
+    documentB: v.id("documents"),
+    count: v.number(),                // how many sessions they co-occurred in
+    lastSeen: v.number(),             // last session timestamp
+    strength: v.number(),             // normalized 0-1 co-occurrence strength
+  })
+    .index("by_user", ["userId"])
+    .index("by_document_a", ["userId", "documentA"])
+    .index("by_document_b", ["userId", "documentB"]),
 });

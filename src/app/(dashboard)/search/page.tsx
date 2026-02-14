@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "convex/react";
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "convex/_generated/api";
+import { useSessionId } from "@/lib/use-session-id";
 import { Compass, FileText, Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -23,6 +24,33 @@ export default function SearchPage() {
   const isLoading = results === undefined;
   const documents = results ?? [];
   
+  // 🌊 CURRENTS: Log search hits for temporal pattern detection
+  const logAccess = useMutation(api.laminar.access.logAccess);
+  const sessionId = useSessionId();
+  const lastLoggedQuery = useRef<string>("");
+  
+  useEffect(() => {
+    if (
+      documents.length === 0 ||
+      searchQuery.trim().length < 2 ||
+      searchQuery === lastLoggedQuery.current
+    ) return;
+    
+    // Debounce: wait 1.5s after last keystroke before logging
+    const timer = setTimeout(() => {
+      lastLoggedQuery.current = searchQuery;
+      documents.forEach((doc) => {
+        logAccess({
+          documentId: doc._id,
+          sessionId,
+          action: "search_hit",
+        }).catch(() => {}); // Silent fail
+      });
+    }, 1500);
+    
+    return () => clearTimeout(timer);
+  }, [documents, searchQuery]);
+
   return (
     <div className="container mx-auto max-w-4xl p-6">
       {/* COMPASS Header */}

@@ -7,7 +7,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Calendar, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { use } from "react";
+import { use, useEffect } from "react";
+import { useMutation } from "convex/react";
+import { useSessionId } from "@/lib/use-session-id";
 import { BackNav } from "@/components/back-nav";
 
 export default function DocumentPage({
@@ -22,6 +24,21 @@ export default function DocumentPage({
     id: id as Id<"documents"> 
   });
   
+  // 🌊 CURRENTS: Log document view for temporal pattern detection
+  const logAccess = useMutation(api.laminar.access.logAccess);
+  const sessionId = useSessionId();
+  
+  useEffect(() => {
+    if (!document?._id || !sessionId) return;
+    logAccess({
+      documentId: document._id,
+      sessionId,
+      action: "view",
+    }).catch(() => {
+      // Silent fail — access logging should never block the user
+    });
+  }, [document?._id]); // Only fire when document ID changes
+
   // Loading state
   if (document === undefined) {
     return (
