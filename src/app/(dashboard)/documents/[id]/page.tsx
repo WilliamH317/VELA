@@ -8,9 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, Calendar, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { use, useEffect } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useConvexAuth } from "convex/react";
 import { useSessionId } from "@/lib/use-session-id";
 import { BackNav } from "@/components/back-nav";
+import { CurrentsPanel } from "@/components/currents-panel";
 
 export default function DocumentPage({
   params,
@@ -18,11 +19,13 @@ export default function DocumentPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const { isAuthenticated } = useConvexAuth();
   
   // Fetch document by ID
-  const document = useQuery(api.documents.getById, { 
-    id: id as Id<"documents"> 
-  });
+  const document = useQuery(
+    api.documents.getById, 
+    isAuthenticated ? { id: id as Id<"documents"> } : "skip"
+  );
   
   // 🌊 CURRENTS: Log document view for temporal pattern detection
   const logAccess = useMutation(api.laminar.access.logAccess);
@@ -155,6 +158,11 @@ export default function DocumentPage({
           </div>
         </div>
       </Card>
+
+      {/* 🌊 CURRENTS: Temporal intelligence panel */}
+      <div className="mt-6">
+        <CurrentsPanel documentId={document._id} />
+      </div>
     </div>
   );
 }

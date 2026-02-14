@@ -12,7 +12,17 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Compass, MapPin, Anchor, Ship } from "lucide-react";
+import {
+  Compass,
+  MapPin,
+  Anchor,
+  Ship,
+  Waves,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Timer,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Id } from "convex/_generated/dataModel";
 
@@ -24,6 +34,7 @@ export default function ArchipelagosPage() {
   const { isAuthenticated } = useConvexAuth();
   const [expandedCluster, setExpandedCluster] = useState<string | null>(null);
   const [isCharting, setIsCharting] = useState(false);
+  const [isAnalyzingCurrents, setIsAnalyzingCurrents] = useState(false);
 
   // Real-time queries — skip when not authenticated
   const clusterData = useQuery(
@@ -41,13 +52,30 @@ export default function ArchipelagosPage() {
       : "skip",
   );
 
+  // 🌊 CURRENTS queries
+  const temporalSummary = useQuery(
+    api.laminar.queries.getTemporalSummary,
+    isAuthenticated ? {} : "skip",
+  );
+  const trendingDocs = useQuery(
+    api.laminar.queries.getTrendingDocuments,
+    isAuthenticated ? {} : "skip",
+  );
+
   const runClustering = useAction(api.laminar.engine.run);
+  const runTemporalAnalysis = useAction(
+    api.laminar.temporalRunner.runTemporalAnalysis,
+  );
 
   // Derived state
   const isRunning = isCharting || clusteringStatus?.status === "running";
   const isLoading =
     clusterData === undefined && clusteringStatus === undefined;
   const hasData = clusterData && clusterData.clusters.length > 0;
+  const hasTemporalData =
+    temporalSummary !== null &&
+    temporalSummary !== undefined &&
+    temporalSummary.totalAnalyzed > 0;
 
   const handleRechart = async () => {
     if (isRunning) return;
@@ -58,6 +86,19 @@ export default function ArchipelagosPage() {
       console.error("[ARCHIPELAGOS] Clustering failed:", e);
     } finally {
       setIsCharting(false);
+    }
+  };
+
+  const handleAnalyzeCurrents = async () => {
+    if (isAnalyzingCurrents) return;
+    setIsAnalyzingCurrents(true);
+    try {
+      const result = await runTemporalAnalysis({});
+      console.log("🌊 CURRENTS analysis complete:", result);
+    } catch (e) {
+      console.error("[CURRENTS] Temporal analysis failed:", e);
+    } finally {
+      setIsAnalyzingCurrents(false);
     }
   };
 
@@ -95,6 +136,14 @@ export default function ArchipelagosPage() {
               "We\u2019ll try charting again soon"}
           </p>
         </div>
+        {/* Still show CURRENTS even if clustering failed */}
+        <CurrentsSection
+          temporalSummary={temporalSummary}
+          trendingDocs={trendingDocs}
+          hasTemporalData={hasTemporalData}
+          isAnalyzing={isAnalyzingCurrents}
+          onAnalyze={handleAnalyzeCurrents}
+        />
       </PageShell>
     );
   }
@@ -132,6 +181,14 @@ export default function ArchipelagosPage() {
             <a href="/upload">Navigate to PORT</a>
           </Button>
         </div>
+        {/* CURRENTS section available even without clusters */}
+        <CurrentsSection
+          temporalSummary={temporalSummary}
+          trendingDocs={trendingDocs}
+          hasTemporalData={hasTemporalData}
+          isAnalyzing={isAnalyzingCurrents}
+          onAnalyze={handleAnalyzeCurrents}
+        />
       </PageShell>
     );
   }
@@ -297,6 +354,17 @@ export default function ArchipelagosPage() {
           );
         })}
       </div>
+
+      {/* ══════════════════════════════════════════════════════════════
+          🌊 CURRENTS — Temporal Intelligence Section
+          ══════════════════════════════════════════════════════════════ */}
+      <CurrentsSection
+        temporalSummary={temporalSummary}
+        trendingDocs={trendingDocs}
+        hasTemporalData={hasTemporalData}
+        isAnalyzing={isAnalyzingCurrents}
+        onAnalyze={handleAnalyzeCurrents}
+      />
     </PageShell>
   );
 }
@@ -311,7 +379,266 @@ const tealButtonStyle: React.CSSProperties = {
 };
 
 // ============================================================================
-// SUB-COMPONENTS
+// CURRENTS SECTION
+// ============================================================================
+
+interface CurrentsSectionProps {
+  temporalSummary: {
+    rising: number;
+    stable: number;
+    declining: number;
+    periodic: number;
+    totalAnalyzed: number;
+  } | null | undefined;
+  trendingDocs: Array<{
+    documentId: Id<"documents">;
+    title: string;
+    accessRate: number;
+    predictedRelevance: number;
+  }> | null | undefined;
+  hasTemporalData: boolean;
+  isAnalyzing: boolean;
+  onAnalyze: () => void;
+}
+
+function CurrentsSection({
+  temporalSummary,
+  trendingDocs,
+  hasTemporalData,
+  isAnalyzing,
+  onAnalyze,
+}: CurrentsSectionProps) {
+  return (
+    <div className="space-y-6">
+      {/* Section header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2
+            className="text-xl font-bold flex items-center gap-2"
+            style={{ color: "#1B3D5C" }}
+          >
+            <Waves className="h-6 w-6" style={{ color: "#00BCD4" }} />
+            CURRENTS
+          </h2>
+          <p className="text-muted-foreground text-sm mt-1">
+            Temporal patterns in your knowledge navigation
+          </p>
+        </div>
+        <Button
+          onClick={onAnalyze}
+          disabled={isAnalyzing}
+          variant="outline"
+          className="shrink-0"
+          style={
+            isAnalyzing
+              ? undefined
+              : {
+                  borderColor: "#00BCD4",
+                  color: "#00BCD4",
+                }
+          }
+        >
+          {isAnalyzing ? (
+            <>
+              <Waves className="h-4 w-4 animate-pulse" />
+              Analyzing...
+            </>
+          ) : (
+            <>
+              <Waves className="h-4 w-4" />
+              Analyze CURRENTS
+            </>
+          )}
+        </Button>
+      </div>
+
+      {/* ── No temporal data yet ─────────────────────────────────── */}
+      {!hasTemporalData && !isAnalyzing && (
+        <Card
+          className="border"
+          style={{ borderColor: "rgba(27, 61, 92, 0.15)" }}
+        >
+          <CardContent className="flex flex-col items-center py-12 text-center">
+            <Waves
+              className="h-12 w-12 mb-4 opacity-30"
+              style={{ color: "#1B3D5C" }}
+            />
+            <p
+              className="text-sm font-medium"
+              style={{ color: "#1B3D5C" }}
+            >
+              Still waters — no temporal patterns yet
+            </p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+              Browse your documents to build access history, then run
+              CURRENTS analysis to discover temporal patterns
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Analyzing animation ──────────────────────────────────── */}
+      {isAnalyzing && (
+        <div
+          className="rounded-lg px-4 py-6"
+          style={{ backgroundColor: "rgba(0, 188, 212, 0.05)" }}
+        >
+          <WaveBar />
+          <p
+            className="text-sm text-center mt-3"
+            style={{ color: "#1B3D5C" }}
+          >
+            Reading the CURRENTS of your knowledge navigation...
+          </p>
+        </div>
+      )}
+
+      {/* ── Temporal Summary Cards ───────────────────────────────── */}
+      {hasTemporalData && temporalSummary && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <TrendCard
+            icon={TrendingUp}
+            label="Rising"
+            count={temporalSummary.rising}
+            color="#00897B"
+            bg="rgba(0, 188, 212, 0.08)"
+          />
+          <TrendCard
+            icon={Minus}
+            label="Stable"
+            count={temporalSummary.stable}
+            color="#1B3D5C"
+            bg="rgba(27, 61, 92, 0.05)"
+          />
+          <TrendCard
+            icon={TrendingDown}
+            label="Declining"
+            count={temporalSummary.declining}
+            color="#C62828"
+            bg="rgba(244, 67, 54, 0.05)"
+          />
+          <TrendCard
+            icon={Timer}
+            label="Periodic"
+            count={temporalSummary.periodic}
+            color="#00BCD4"
+            bg="rgba(0, 188, 212, 0.06)"
+          />
+        </div>
+      )}
+
+      {/* ── Trending Documents ───────────────────────────────────── */}
+      {trendingDocs && trendingDocs.length > 0 && (
+        <Card
+          className="border"
+          style={{ borderColor: "rgba(27, 61, 92, 0.15)" }}
+        >
+          <CardHeader className="pb-3">
+            <CardTitle
+              className="text-sm font-semibold flex items-center gap-2"
+              style={{ color: "#1B3D5C" }}
+            >
+              <TrendingUp
+                className="h-4 w-4"
+                style={{ color: "#00897B" }}
+              />
+              Rising CURRENTS
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Documents gaining momentum in your navigation
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {trendingDocs.map((doc) => (
+              <a
+                key={doc.documentId}
+                href={`/documents/${doc.documentId}`}
+                className="flex items-center justify-between gap-3 px-3 py-2 rounded-md transition-colors group"
+                style={{ backgroundColor: "rgba(27, 61, 92, 0.02)" }}
+              >
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <TrendingUp
+                    className="h-3.5 w-3.5 shrink-0"
+                    style={{ color: "#00897B" }}
+                  />
+                  <span
+                    className="text-sm truncate group-hover:underline"
+                    style={{ color: "#1B3D5C" }}
+                  >
+                    {doc.title}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {doc.accessRate.toFixed(1)}/day
+                  </span>
+                  <div
+                    className="h-1.5 w-12 rounded-full overflow-hidden"
+                    style={{
+                      backgroundColor: "rgba(27, 61, 92, 0.1)",
+                    }}
+                  >
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.round(doc.predictedRelevance * 100)}%`,
+                        background:
+                          "linear-gradient(to right, #1B3D5C, #00BCD4)",
+                      }}
+                    />
+                  </div>
+                </div>
+              </a>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// TREND SUMMARY CARD
+// ============================================================================
+
+function TrendCard({
+  icon: Icon,
+  label,
+  count,
+  color,
+  bg,
+}: {
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  label: string;
+  count: number;
+  color: string;
+  bg: string;
+}) {
+  return (
+    <Card
+      className="border"
+      style={{ borderColor: "rgba(27, 61, 92, 0.1)" }}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <div
+            className="h-7 w-7 rounded-md flex items-center justify-center"
+            style={{ backgroundColor: bg }}
+          >
+            <Icon className="h-4 w-4" style={{ color }} />
+          </div>
+          <span className="text-xs text-muted-foreground">{label}</span>
+        </div>
+        <p className="text-2xl font-bold" style={{ color }}>
+          {count}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============================================================================
+// SUB-COMPONENTS (existing)
 // ============================================================================
 
 /** Wrapper that provides the container and wave CSS keyframes. */
