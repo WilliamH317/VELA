@@ -106,7 +106,7 @@ export const batchUpsertTemporalPatterns = internalMutation({
           accessRate: pattern.accessRate,
           rateOfChange: pattern.rateOfChange,
           trend: pattern.trend,
-          periodicity: pattern.periodicity,
+          ...(pattern.periodicity !== undefined ? { periodicity: pattern.periodicity } : {}),
           predictedRelevance: pattern.predictedRelevance,
           lastComputed: now,
           totalAccesses: pattern.totalAccesses,

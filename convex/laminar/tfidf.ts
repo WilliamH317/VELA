@@ -150,7 +150,7 @@ export function computeTFIDF(
   // Build a quick lookup: term → column index
   const termIndex = new Map<string, number>();
   for (let i = 0; i < vocabulary.length; i++) {
-    termIndex.set(vocabulary[i], i);
+    termIndex.set(vocabulary[i]!, i);
   }
 
   // --- Pass 1: document frequency for IDF ----------------------------------
@@ -163,7 +163,7 @@ export function computeTFIDF(
     for (const t of tokens) {
       const idx = termIndex.get(t);
       if (idx !== undefined && !seen.has(idx)) {
-        df[idx]++;
+        df[idx] = df[idx]! + 1;
         seen.add(idx);
       }
     }
@@ -172,7 +172,7 @@ export function computeTFIDF(
   // Pre-compute IDF for each vocabulary term.
   const idf = new Float64Array(vocabulary.length);
   for (let i = 0; i < vocabulary.length; i++) {
-    idf[i] = Math.log(N / (1 + df[i]));
+    idf[i] = Math.log(N / (1 + df[i]!));
   }
 
   // --- Pass 2: TF-IDF per document -----------------------------------------
@@ -184,14 +184,14 @@ export function computeTFIDF(
     for (const t of tokens) {
       const idx = termIndex.get(t);
       if (idx !== undefined) {
-        tf[idx]++;
+        tf[idx] = tf[idx]! + 1;
       }
     }
 
     // Sublinear TF × IDF
     const vec = new Array<number>(vocabulary.length);
     for (let i = 0; i < vocabulary.length; i++) {
-      vec[i] = tf[i] > 0 ? (1 + Math.log(tf[i])) * idf[i] : 0;
+      vec[i] = tf[i]! > 0 ? (1 + Math.log(tf[i]!)) * idf[i]! : 0;
     }
 
     // L2 normalize
@@ -228,7 +228,7 @@ export function cosineSimilarity(a: TFIDFVector, b: TFIDFVector): number {
   const len = Math.min(a.length, b.length);
   let dot = 0;
   for (let i = 0; i < len; i++) {
-    dot += a[i] * b[i];
+    dot += a[i]! * b[i]!;
   }
   return dot;
 }
@@ -248,11 +248,11 @@ export function cosineSimilarity(a: TFIDFVector, b: TFIDFVector): number {
 function l2Normalize(vec: number[]): void {
   let sumSq = 0;
   for (let i = 0; i < vec.length; i++) {
-    sumSq += vec[i] * vec[i];
+    sumSq += vec[i]! * vec[i]!;
   }
   if (sumSq === 0) return;
   const norm = Math.sqrt(sumSq);
   for (let i = 0; i < vec.length; i++) {
-    vec[i] /= norm;
+    vec[i] = vec[i]! / norm;
   }
 }

@@ -54,17 +54,19 @@ function computePerClusterCoherence(
   const counts = new Array<number>(k).fill(0);
 
   for (let i = 0; i < labels.length; i++) {
-    const c = labels[i];
+    const c = labels[i]!;
     const vec = matrix[i];
+    if (!vec) continue;
     const centroid = centroids[c];
+    if (!centroid) continue;
 
     let dot = 0;
     let normA = 0;
     let normB = 0;
     for (let j = 0; j < vec.length; j++) {
-      dot += vec[j] * centroid[j];
-      normA += vec[j] * vec[j];
-      normB += centroid[j] * centroid[j];
+      dot += vec[j]! * centroid[j]!;
+      normA += vec[j]! * vec[j]!;
+      normB += centroid[j]! * centroid[j]!;
     }
 
     const similarity =
@@ -72,11 +74,11 @@ function computePerClusterCoherence(
         ? dot / (Math.sqrt(normA) * Math.sqrt(normB))
         : 0;
 
-    sums[c] += similarity;
-    counts[c]++;
+    sums[c] = sums[c]! + similarity;
+    counts[c] = counts[c]! + 1;
   }
 
-  return sums.map((sum, c) => (counts[c] > 0 ? sum / counts[c] : 0));
+  return sums.map((sum, c) => (counts[c]! > 0 ? sum / counts[c]! : 0));
 }
 
 /**
@@ -101,17 +103,17 @@ function extractClusterKeywords(
     const avgWeights = new Array<number>(vocabulary.length).fill(0);
     for (const idx of memberIndices) {
       for (let t = 0; t < vocabulary.length; t++) {
-        avgWeights[t] += matrix[idx][t];
+        avgWeights[t] = avgWeights[t]! + matrix[idx]![t]!;
       }
     }
     if (memberIndices.length > 0) {
       for (let t = 0; t < vocabulary.length; t++) {
-        avgWeights[t] /= memberIndices.length;
+        avgWeights[t] = avgWeights[t]! / memberIndices.length;
       }
     }
 
     const topTerms = avgWeights
-      .map((weight, i) => ({ term: vocabulary[i], weight }))
+      .map((weight, i) => ({ term: vocabulary[i]!, weight }))
       .sort((a, b) => b.weight - a.weight)
       .slice(0, topN)
       .map((entry) => entry.term);
@@ -403,22 +405,22 @@ export const run = action({
           {
             userId,
             runId,
-            name: clusterNames[c],
+            name: clusterNames[c]!,
             documentCount: memberCount,
-            topKeywords: clusterKeywords[c],
-            centroid: Array.from(centroids[c]),
-            coherenceScore: coherenceScores[c],
-            color: CLUSTER_COLORS[c % CLUSTER_COLORS.length],
+            topKeywords: clusterKeywords[c]!,
+            centroid: Array.from(centroids[c]!),
+            coherenceScore: coherenceScores[c]!,
+            color: CLUSTER_COLORS[c % CLUSTER_COLORS.length]!,
             createdAt: now,
           },
         );
 
         clusterIds.push(clusterId);
         clusterSummaries.push({
-          name: clusterNames[c],
+          name: clusterNames[c]!,
           documentCount: memberCount,
-          topKeywords: clusterKeywords[c],
-          coherenceScore: coherenceScores[c],
+          topKeywords: clusterKeywords[c]!,
+          coherenceScore: coherenceScores[c]!,
         });
       }
 
@@ -437,7 +439,7 @@ export const run = action({
 
       for (let i = 0; i < readyDocs.length; i++) {
         const confidence = computeDocumentConfidence(
-          tfidfMatrix[i],
+          tfidfMatrix[i]!,
           centroids,
           clusterIdStrings,
         );
@@ -448,8 +450,8 @@ export const run = action({
 
           allMemberships.push({
             userId,
-            documentId: docIds[i],
-            clusterId: clusterIds[clusterIdx],
+            documentId: docIds[i]!,
+            clusterId: clusterIds[clusterIdx]!,
             runId,
             probability: membership.probability,
             isPrimary: membership.clusterId === confidence.primaryCluster,
@@ -480,11 +482,11 @@ export const run = action({
       for (let c = 0; c < k; c++) {
         const memberCount = labels.filter((l) => l === c).length;
         historyEntries.push({
-          clusterId: clusterIds[c],
+          clusterId: clusterIds[c]!,
           runId,
           membershipCount: memberCount,
           accessCount: 0,
-          coherenceScore: coherenceScores[c],
+          coherenceScore: coherenceScores[c]!,
           timestamp: now,
         });
       }

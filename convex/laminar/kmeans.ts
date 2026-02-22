@@ -48,7 +48,7 @@ export interface KMeansResult {
 function squaredEuclidean(a: Vector, b: Vector): number {
   let sum = 0;
   for (let i = 0; i < a.length; i++) {
-    const d = a[i] - b[i];
+    const d = a[i]! - b[i]!;
     sum += d * d;
   }
   return sum;
@@ -117,36 +117,36 @@ export function initializeCentroids(
 
   // Step 1: first centroid chosen uniformly at random.
   const firstIdx = Math.floor(rng() * n);
-  centroids.push([...vectors[firstIdx]]);
+  centroids.push([...vectors[firstIdx]!]);
 
   // Squared distances from each point to nearest chosen centroid.
   const minDist = new Float64Array(n).fill(Infinity);
 
   for (let c = 1; c < k; c++) {
     // Update minimum distances with the most recently added centroid.
-    const lastCentroid = centroids[c - 1];
+    const lastCentroid = centroids[c - 1]!;
     for (let i = 0; i < n; i++) {
-      const d = squaredEuclidean(vectors[i], lastCentroid);
-      if (d < minDist[i]) minDist[i] = d;
+      const d = squaredEuclidean(vectors[i]!, lastCentroid);
+      if (d < minDist[i]!) minDist[i] = d;
     }
 
     // Build cumulative distribution of D(x)².
     let totalDist = 0;
-    for (let i = 0; i < n; i++) totalDist += minDist[i];
+    for (let i = 0; i < n; i++) totalDist += minDist[i]!;
 
     // Sample next centroid proportional to D(x)².
     const threshold = rng() * totalDist;
     let cumulative = 0;
     let chosen = 0;
     for (let i = 0; i < n; i++) {
-      cumulative += minDist[i];
+      cumulative += minDist[i]!;
       if (cumulative >= threshold) {
         chosen = i;
         break;
       }
     }
 
-    centroids.push([...vectors[chosen]]);
+    centroids.push([...vectors[chosen]!]);
   }
 
   return centroids;
@@ -177,7 +177,7 @@ export function assignClusters(
     let bestCluster = 0;
 
     for (let c = 0; c < centroids.length; c++) {
-      const d = squaredEuclidean(vectors[i], centroids[c]);
+      const d = squaredEuclidean(vectors[i]!, centroids[c]!);
       if (d < bestDist) {
         bestDist = d;
         bestCluster = c;
@@ -214,24 +214,24 @@ export function updateCentroids(
 ): Vector[] {
   if (vectors.length === 0) return previous ? previous.map((v) => [...v]) : [];
 
-  const dims = vectors[0].length;
+  const dims = vectors[0]!.length;
   const sums: number[][] = Array.from({ length: k }, () => new Array(dims).fill(0));
   const counts = new Array<number>(k).fill(0);
 
   for (let i = 0; i < vectors.length; i++) {
-    const c = assignments[i];
-    counts[c]++;
+    const c = assignments[i]!;
+    counts[c] = counts[c]! + 1;
     for (let d = 0; d < dims; d++) {
-      sums[c][d] += vectors[i][d];
+      sums[c]![d] = sums[c]![d]! + vectors[i]![d]!;
     }
   }
 
   return sums.map((sum, c) => {
     if (counts[c] === 0) {
       // Empty cluster — keep previous centroid if available.
-      return previous ? [...previous[c]] : new Array(dims).fill(0);
+      return previous ? [...previous[c]!] : new Array(dims).fill(0);
     }
-    return sum.map((s) => s / counts[c]);
+    return sum.map((s) => s / counts[c]!);
   });
 }
 
@@ -343,29 +343,29 @@ export function calculateSilhouette(
   const dist: Float64Array[] = Array.from({ length: n }, () => new Float64Array(n));
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
-      const d = euclidean(vectors[i], vectors[j]);
-      dist[i][j] = d;
-      dist[j][i] = d;
+      const d = euclidean(vectors[i]!, vectors[j]!);
+      dist[i]![j] = d;
+      dist[j]![i] = d;
     }
   }
 
   // Cluster membership lists.
   const clusters: number[][] = Array.from({ length: k }, () => []);
   for (let i = 0; i < n; i++) {
-    clusters[labels[i]].push(i);
+    clusters[labels[i]!]!.push(i);
   }
 
   let totalSilhouette = 0;
 
   for (let i = 0; i < n; i++) {
-    const myCluster = labels[i];
-    const myClusterMembers = clusters[myCluster];
+    const myCluster = labels[i]!;
+    const myClusterMembers = clusters[myCluster]!;
 
     // a(i): mean intra-cluster distance.
     let a = 0;
     if (myClusterMembers.length > 1) {
       for (const j of myClusterMembers) {
-        if (j !== i) a += dist[i][j];
+        if (j !== i) a += dist[i]![j]!;
       }
       a /= myClusterMembers.length - 1;
     }
@@ -373,12 +373,12 @@ export function calculateSilhouette(
     // b(i): smallest mean inter-cluster distance.
     let b = Infinity;
     for (let c = 0; c < k; c++) {
-      if (c === myCluster || clusters[c].length === 0) continue;
+      if (c === myCluster || clusters[c]!.length === 0) continue;
       let meanDist = 0;
-      for (const j of clusters[c]) {
-        meanDist += dist[i][j];
+      for (const j of clusters[c]!) {
+        meanDist += dist[i]![j]!;
       }
-      meanDist /= clusters[c].length;
+      meanDist /= clusters[c]!.length;
       if (meanDist < b) b = meanDist;
     }
 

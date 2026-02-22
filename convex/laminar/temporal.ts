@@ -109,7 +109,7 @@ export function detectPeriodicity(
   const intervals: number[] = [];
   for (let i = 1; i < sortedTimestamps.length; i++) {
     const intervalDays =
-      (sortedTimestamps[i] - sortedTimestamps[i - 1]) / MS_PER_DAY;
+      (sortedTimestamps[i]! - sortedTimestamps[i - 1]!) / MS_PER_DAY;
     intervals.push(intervalDays);
   }
 
@@ -251,7 +251,7 @@ export function estimateAccessTrajectory(
   }
 
   // Recency bonus: how recently was the last access?
-  const mostRecent = sorted[sorted.length - 1];
+  const mostRecent = sorted[sorted.length - 1]!;
   const daysSinceLastAccess = (now - mostRecent) / MS_PER_DAY;
   const recencyBonus =
     daysSinceLastAccess < 1 ? 0.1 : daysSinceLastAccess < 7 ? 0.05 : 0;

@@ -103,26 +103,26 @@ export function distancesToProbabilities(
   // Compute logits: −d / T
   const logits = new Array<number>(n);
   for (let i = 0; i < n; i++) {
-    logits[i] = -distances[i] / t;
+    logits[i] = -distances[i]! / t;
   }
 
   // Numerical stability: subtract max logit before exp.
   let maxLogit = -Infinity;
   for (let i = 0; i < n; i++) {
-    if (logits[i] > maxLogit) maxLogit = logits[i];
+    if (logits[i]! > maxLogit) maxLogit = logits[i]!;
   }
 
   const exps = new Array<number>(n);
   let sumExp = 0;
   for (let i = 0; i < n; i++) {
-    exps[i] = Math.exp(logits[i] - maxLogit);
-    sumExp += exps[i];
+    exps[i] = Math.exp(logits[i]! - maxLogit);
+    sumExp += exps[i]!;
   }
 
   // Normalize to get probabilities.
   const probs = new Array<number>(n);
   for (let i = 0; i < n; i++) {
-    probs[i] = exps[i] / sumExp;
+    probs[i] = exps[i]! / sumExp;
   }
 
   return probs;
@@ -158,7 +158,7 @@ export function classifyConfidence(
     return { confidence: 0, isAmbiguous: false };
   }
   if (memberships.length === 1) {
-    return { confidence: memberships[0].probability, isAmbiguous: false };
+    return { confidence: memberships[0]!.probability, isAmbiguous: false };
   }
 
   // Find the top two probabilities.
@@ -227,7 +227,7 @@ export function computeDocumentConfidence(
 
   // Build membership array sorted by probability descending.
   const memberships: ClusterMembership[] = clusterIds
-    .map((clusterId, i) => ({ clusterId, probability: probabilities[i] }))
+    .map((clusterId, i) => ({ clusterId, probability: probabilities[i]! }))
     .sort((a, b) => b.probability - a.probability);
 
   // Classify confidence.
@@ -256,7 +256,7 @@ export function computeDocumentConfidence(
 function euclideanDistance(a: number[], b: number[]): number {
   let sum = 0;
   for (let i = 0; i < a.length; i++) {
-    const d = a[i] - b[i];
+    const d = a[i]! - b[i]!;
     sum += d * d;
   }
   return Math.sqrt(sum);
