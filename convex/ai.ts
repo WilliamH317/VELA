@@ -1,12 +1,20 @@
+// convex/ai.ts — LIGHTHOUSE: AI-Powered Knowledge Navigator
+//
+// Two modes of operation:
+//   askQuestion    — User selects specific documents (Manual Selection)
+//   generateAnswer — AI auto-searches for relevant docs (Smart Search)
+//
+// Both call Claude API via the Anthropic SDK, log results via
+// internal.queries.log, and return structured LighthouseResponse.
+//
+// Usage stats are handled by the getUsageStats *query* in queries.ts
+// (real-time, no action overhead). Don't duplicate that here.
+
 import { action } from "./_generated/server";
 import { v } from "convex/values";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 import Anthropic from "@anthropic-ai/sdk";
-
-// ============================================================================
-// VELA LIGHTHOUSE - AI-Powered Knowledge Navigator
-// ============================================================================
 
 // ============================================================================
 // CONFIGURATION
@@ -46,18 +54,6 @@ interface ConnectionTestResponse {
   message: string;
   model?: string;
   apiKeyValid: boolean;
-}
-
-interface UsageStats {
-  totalQueries: number;
-  totalTokens: number;
-  avgTokensPerQuery: number;
-  avgResponseTime: number;
-  estimatedCost: string;
-  period: {
-    from: string;
-    to: string;
-  } | null;
 }
 
 // ============================================================================
@@ -104,10 +100,12 @@ WHEN INFORMATION IS MISSING:
 
 function buildDocumentContext(documents: Doc<"documents">[]): string {
   return documents
-    .map((doc: Doc<"documents">, index: number) => {
-      const content = doc.contentPlain.length > MAX_CHARS_PER_DOC
-        ? doc.contentPlain.slice(0, MAX_CHARS_PER_DOC) + "\n\n[Content truncated for length - this document contains more information]"
-        : doc.contentPlain;
+    .map((doc, index) => {
+      const content =
+        doc.contentPlain.length > MAX_CHARS_PER_DOC
+          ? doc.contentPlain.slice(0, MAX_CHARS_PER_DOC) +
+            "\n\n[Content truncated for length - this document contains more information]"
+          : doc.contentPlain;
 
       return `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -139,37 +137,48 @@ ${query}
 Please provide a comprehensive answer based on the documents above. Remember to cite specific documents when making claims and structure your answer clearly.`;
 }
 
-function handleClaudeError(error: any): never {
+function handleClaudeError(error: unknown): never {
   console.error("[LIGHTHOUSE] Claude API Error:", error);
 
-  if (error?.status === 429) {
-    throw new Error("🌊 High tide of requests - please wait a moment and try again");
+  // Use the SDK's own error class for safe status access
+  const status =
+    error instanceof Anthropic.APIError ? error.status : undefined;
+  const message =
+    error instanceof Error ? error.message : "Unknown error occurred";
+
+  if (status === 429) {
+    throw new Error(
+      "🌊 High tide of requests - please wait a moment and try again"
+    );
+  }
+  if (status === 401 || status === 403) {
+    throw new Error(
+      "🔑 API authentication failed - check your API key configuration"
+    );
+  }
+  if (status === 500 || status === 503) {
+    throw new Error(
+      "⛈️ Claude API temporarily unavailable - navigating through stormy seas, try again in a moment"
+    );
+  }
+  if (status === 400) {
+    throw new Error(
+      "⚠️ Invalid request - check your question and selected documents"
+    );
+  }
+  if (status === 413) {
+    throw new Error(
+      "🌊 Request too large - try selecting fewer documents or asking a shorter question"
+    );
   }
 
-  if (error?.status === 401 || error?.status === 403) {
-    throw new Error("🔑 API authentication failed - check your API key configuration");
-  }
-
-  if (error?.status === 500 || error?.status === 503) {
-    throw new Error("⛈️ Claude API temporarily unavailable - navigating through stormy seas, try again in a moment");
-  }
-
-  if (error?.status === 400) {
-    throw new Error("⚠️ Invalid request - check your question and selected documents");
-  }
-
-  if (error?.status === 413) {
-    throw new Error("🌊 Request too large - try selecting fewer documents or asking a shorter question");
-  }
-
-  const message = error?.message || "Unknown error occurred";
   throw new Error(`💨 Stormy seas encountered: ${message}`);
 }
 
 function extractAnswerText(response: Anthropic.Message): string {
   return response.content
-    .filter((block) => block.type === "text")
-    .map((block) => (block as Anthropic.TextBlock).text)
+    .filter((block): block is Anthropic.TextBlock => block.type === "text")
+    .map((block) => block.text)
     .join("\n");
 }
 
@@ -177,21 +186,27 @@ function validateQuery(query: string): void {
   const trimmedQuery = query.trim();
 
   if (trimmedQuery.length === 0) {
-    throw new Error("🧭 Your COMPASS needs direction - please ask a question");
+    throw new Error(
+      "🧭 Your COMPASS needs direction - please ask a question"
+    );
   }
-
   if (trimmedQuery.length > MAX_QUERY_LENGTH) {
-    throw new Error(`⛵ Question too long - keep it under ${MAX_QUERY_LENGTH} characters`);
+    throw new Error(
+      `⛵ Question too long - keep it under ${MAX_QUERY_LENGTH} characters`
+    );
   }
 }
 
 function validateDocumentIds(documentIds: Id<"documents">[]): void {
   if (documentIds.length === 0) {
-    throw new Error("📚 No documents selected - choose at least one document to search");
+    throw new Error(
+      "📚 No documents selected - choose at least one document to search"
+    );
   }
-
   if (documentIds.length > MAX_DOCUMENTS) {
-    throw new Error(`🌊 Too many documents - limit to ${MAX_DOCUMENTS} for best results`);
+    throw new Error(
+      `🌊 Too many documents - limit to ${MAX_DOCUMENTS} for best results`
+    );
   }
 }
 
@@ -200,8 +215,8 @@ function validateDocumentIds(documentIds: Id<"documents">[]): void {
 // ============================================================================
 
 /**
- * APPROACH 1: Manual Document Selection (askQuestion)
- * 
+ * APPROACH 1: Manual Document Selection
+ *
  * User explicitly selects which documents to search.
  * Best for focused queries where user knows relevant documents.
  */
@@ -228,19 +243,23 @@ export const askQuestion = action({
 
     // Fetch and Verify Documents
     console.log(`[LIGHTHOUSE] Question: "${trimmedQuery}"`);
-    console.log(`[LIGHTHOUSE] Fetching ${args.documentIds.length} documents...`);
+    console.log(
+      `[LIGHTHOUSE] Fetching ${args.documentIds.length} documents...`
+    );
 
     const documents: Doc<"documents">[] = await Promise.all(
       args.documentIds.map(async (id): Promise<Doc<"documents">> => {
         const doc = await ctx.runQuery(api.documents.getById, { id });
-        
+
         if (!doc) {
           throw new Error(`📄 Document not found: ${id}`);
         }
 
         // Security: Verify user owns the document
         if (doc.userId !== identity.subject) {
-          throw new Error(`🔒 Unauthorized access to document: ${doc.title}`);
+          throw new Error(
+            `🔒 Unauthorized access to document: ${doc.title}`
+          );
         }
 
         return doc;
@@ -261,32 +280,33 @@ export const askQuestion = action({
     try {
       response = await anthropic.messages.create({
         model: process.env.ANTHROPIC_MODEL || DEFAULT_MODEL,
-        max_tokens: args.maxTokens || parseInt(process.env.ANTHROPIC_MAX_TOKENS || String(DEFAULT_MAX_TOKENS)),
+        max_tokens:
+          args.maxTokens ||
+          parseInt(
+            process.env.ANTHROPIC_MAX_TOKENS || String(DEFAULT_MAX_TOKENS)
+          ),
         system: systemPrompt,
-        messages: [
-          {
-            role: "user",
-            content: userPrompt,
-          },
-        ],
+        messages: [{ role: "user", content: userPrompt }],
       });
     } catch (error) {
       handleClaudeError(error);
     }
 
-    const endTime = Date.now();
-    const responseTimeMs = endTime - startTime;
+    const responseTimeMs = Date.now() - startTime;
 
     // Extract and Process Answer
     const answerText = extractAnswerText(response);
-    const tokensUsed = response.usage.input_tokens + response.usage.output_tokens;
+    const tokensUsed =
+      response.usage.input_tokens + response.usage.output_tokens;
 
     console.log(`[LIGHTHOUSE] ✓ Answer generated in ${responseTimeMs}ms`);
-    console.log(`[LIGHTHOUSE] ✓ Used ${tokensUsed} tokens (${response.usage.input_tokens} in / ${response.usage.output_tokens} out)`);
+    console.log(
+      `[LIGHTHOUSE] ✓ Used ${tokensUsed} tokens (${response.usage.input_tokens} in / ${response.usage.output_tokens} out)`
+    );
 
-    // Log Query for Analytics
+    // Log Query for Analytics (non-blocking — failure won't break the response)
     try {
-      await ctx.runMutation(api.queries.log, {
+      await ctx.runMutation(internal.queries.log, {
         userId: identity.subject,
         query: trimmedQuery,
         answer: answerText.slice(0, 500),
@@ -319,10 +339,10 @@ export const askQuestion = action({
 });
 
 /**
- * APPROACH 2: Automatic Document Search (generateAnswer)
- * 
+ * APPROACH 2: Automatic Document Search (Smart Search)
+ *
  * Automatically searches for relevant documents using full-text search.
- * Best for quick queries where user doesn't know relevant documents.
+ * Best for quick queries where user doesn't know which docs are relevant.
  */
 export const generateAnswer = action({
   args: {
@@ -347,13 +367,12 @@ export const generateAnswer = action({
 
     // Auto-Search for Relevant Documents
     console.log(`[LIGHTHOUSE] Auto-search for: "${trimmedQuery}"`);
-    console.log(`[LIGHTHOUSE] Looking for top ${maxSources} relevant documents...`);
+    console.log(
+      `[LIGHTHOUSE] Looking for top ${maxSources} relevant documents...`
+    );
 
-    // FIXED: Use the correct search function signature from your documents.ts
     const searchResults = await ctx.runQuery(api.documents.search, {
       query: trimmedQuery,
-      // Note: If your search function doesn't support limit, 
-      // we'll slice the results after
     });
 
     // Limit results to maxSources
@@ -361,12 +380,12 @@ export const generateAnswer = action({
 
     if (limitedResults.length === 0) {
       console.log(`[LIGHTHOUSE] ⚠ No documents found`);
-      
+
       return {
         answer: `⛵ I couldn't find any relevant documents in your knowledge base to answer this question.
 
 **Suggestions:**
-- Upload documents about "${trimmedQuery.split(' ').slice(0, 3).join(' ')}"
+- Upload documents about "${trimmedQuery.split(" ").slice(0, 3).join(" ")}"
 - Rephrase your question with different keywords
 - Check if you have documents that cover this topic
 - Try a broader or more specific question
@@ -383,7 +402,9 @@ Once you upload relevant documents, I'll be able to search them and provide deta
       };
     }
 
-    console.log(`[LIGHTHOUSE] ✓ Found ${limitedResults.length} relevant documents`);
+    console.log(
+      `[LIGHTHOUSE] ✓ Found ${limitedResults.length} relevant documents`
+    );
 
     // Build Context for Claude
     const systemPrompt = buildSystemPrompt();
@@ -397,36 +418,37 @@ Once you upload relevant documents, I'll be able to search them and provide deta
     try {
       response = await anthropic.messages.create({
         model: process.env.ANTHROPIC_MODEL || DEFAULT_MODEL,
-        max_tokens: args.maxTokens || parseInt(process.env.ANTHROPIC_MAX_TOKENS || String(DEFAULT_MAX_TOKENS)),
+        max_tokens:
+          args.maxTokens ||
+          parseInt(
+            process.env.ANTHROPIC_MAX_TOKENS || String(DEFAULT_MAX_TOKENS)
+          ),
         system: systemPrompt,
-        messages: [
-          {
-            role: "user",
-            content: userPrompt,
-          },
-        ],
+        messages: [{ role: "user", content: userPrompt }],
       });
     } catch (error) {
       handleClaudeError(error);
     }
 
-    const endTime = Date.now();
-    const responseTimeMs = endTime - startTime;
+    const responseTimeMs = Date.now() - startTime;
 
     // Extract and Process Answer
     const answerText = extractAnswerText(response);
-    const tokensUsed = response.usage.input_tokens + response.usage.output_tokens;
+    const tokensUsed =
+      response.usage.input_tokens + response.usage.output_tokens;
 
     console.log(`[LIGHTHOUSE] ✓ Answer generated in ${responseTimeMs}ms`);
-    console.log(`[LIGHTHOUSE] ✓ Used ${tokensUsed} tokens (${response.usage.input_tokens} in / ${response.usage.output_tokens} out)`);
+    console.log(
+      `[LIGHTHOUSE] ✓ Used ${tokensUsed} tokens (${response.usage.input_tokens} in / ${response.usage.output_tokens} out)`
+    );
 
-    // Log Query for Analytics
+    // Log Query for Analytics (non-blocking — failure won't break the response)
     try {
-      await ctx.runMutation(api.queries.log, {
+      await ctx.runMutation(internal.queries.log, {
         userId: identity.subject,
         query: trimmedQuery,
         answer: answerText.slice(0, 500),
-        documentIds: limitedResults.map(d => d._id),
+        documentIds: limitedResults.map((d) => d._id),
         tokensUsed,
         responseTimeMs,
         model: response.model,
@@ -472,7 +494,7 @@ export const testConnection = action({
     console.log("[LIGHTHOUSE] Testing Claude API connection...");
 
     try {
-      const response: Anthropic.Message = await anthropic.messages.create({
+      const response = await anthropic.messages.create({
         model: DEFAULT_MODEL,
         max_tokens: 100,
         messages: [
@@ -484,9 +506,12 @@ export const testConnection = action({
       });
 
       const text = extractAnswerText(response);
-      const tokensUsed = response.usage.input_tokens + response.usage.output_tokens;
+      const tokensUsed =
+        response.usage.input_tokens + response.usage.output_tokens;
 
-      console.log(`[LIGHTHOUSE] ✓ Connection successful (${tokensUsed} tokens used)`);
+      console.log(
+        `[LIGHTHOUSE] ✓ Connection successful (${tokensUsed} tokens used)`
+      );
 
       return {
         success: true,
@@ -494,73 +519,23 @@ export const testConnection = action({
         model: response.model,
         apiKeyValid: true,
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error("[LIGHTHOUSE] ✗ Connection failed:", error);
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Connection failed - check API key in .env.local";
 
       return {
         success: false,
-        message: error?.message || "Connection failed - check API key in .env.local",
+        message,
         apiKeyValid: false,
       };
     }
   },
 });
 
-/**
- * Get Claude API Usage Statistics
- * 
- * FIXED: Uses getUserQueries from your queries.ts instead of getHistory
- */
-export const getUsageStats = action({
-  args: {
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args): Promise<UsageStats> => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("⚓ Not authenticated");
-    }
-
-    console.log(`[LIGHTHOUSE] Calculating usage stats...`);
-
-    // FIXED: Use getUserQueries from your actual queries.ts file
-    // Note: getUserQueries automatically filters by authenticated user
-    const queries = await ctx.runQuery(api.queries.getUserQueries, {
-      limit: args.limit || 100,
-    });
-
-    // Calculate aggregate statistics with proper TypeScript types
-    const totalQueries = queries.length;
-    const totalTokens = queries.reduce((sum: number, q: any) => sum + (q.tokensUsed || 0), 0);
-    const avgTokensPerQuery = totalQueries > 0 ? Math.round(totalTokens / totalQueries) : 0;
-    const avgResponseTime = totalQueries > 0
-      ? Math.round(queries.reduce((sum: number, q: any) => sum + (q.responseTimeMs || 0), 0) / totalQueries)
-      : 0;
-
-    // Estimate cost based on Claude Sonnet 4 pricing
-    // Input: $3/M tokens, Output: $15/M tokens
-    // Using rough 50/50 split: average of $9/M tokens
-    const estimatedCost = (totalTokens / 1_000_000) * 9;
-
-    console.log(`[LIGHTHOUSE] ✓ Stats calculated:`);
-    console.log(`  - ${totalQueries} queries`);
-    console.log(`  - ${totalTokens.toLocaleString()} tokens`);
-    console.log(`  - ${avgTokensPerQuery} avg tokens/query`);
-    console.log(`  - ${avgResponseTime}ms avg response time`);
-    console.log(`  - $${estimatedCost.toFixed(4)} estimated cost`);
-
-    return {
-      totalQueries,
-      totalTokens,
-      avgTokensPerQuery,
-      avgResponseTime,
-      estimatedCost: estimatedCost.toFixed(4),
-      period: queries.length > 0 
-        ? {
-            from: new Date(queries[queries.length - 1].timestamp).toISOString(),
-            to: new Date(queries[0].timestamp).toISOString(),
-          }
-        : null,
-    };
-  },
-});
+// NOTE: Usage stats are served by the real-time query in queries.ts
+// (api.queries.getUsageStats). No need for an action wrapper — queries
+// are reactive, cached, and don't count against action rate limits.

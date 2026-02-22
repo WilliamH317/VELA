@@ -1,11 +1,29 @@
-// convex/schema.ts
+// convex/schema.ts — VELA Database Schema
+//
+// Design principles:
+//   1. Auth-scoped: Every user-facing table has userId + by_user index
+//   2. Index everything filtered: If you query by it, index it
+//   3. Search-optimized: contentPlain field for full-text search
+//   4. Schema now, logic later: Tables for upcoming days added early
+//      so schema deploys don't block feature development
+//
+// Tables by feature:
+//   Core ............ users, documents, queries
+//   LAMINAR 16 ...... clusteringRuns, clusters, clusterMemberships, clusterHistory
+//   LAMINAR 17 ...... accessEvents, temporalPatterns, cooccurrences
+//   LAMINAR 18 ...... knowledgeEdges
+//   LAMINAR 19 ...... cascadeRuns, cascadeImpacts
+
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  // === USER ACCOUNTS (Day 8) ===
+  // ─────────────────────────────────────────────
+  // CORE: Users (Day 8)
+  // ─────────────────────────────────────────────
+
   users: defineTable({
-    clerkId: v.string(),           // Clerk user ID (from identity.subject)
+    clerkId: v.string(),
     email: v.string(),
     name: v.string(),
     imageUrl: v.optional(v.string()),
@@ -16,222 +34,212 @@ export default defineSchema({
     ),
     createdAt: v.number(),
     updatedAt: v.number(),
-  })
-    .index("by_clerk_id", ["clerkId"]),
+  }).index("by_clerk_id", ["clerkId"]),
 
-  // === DOCUMENTS (Day 7 + Multi-Vertical Support) ===
-  // ✅ DAY 11 READY: Schema already includes all file upload fields!
+  // ─────────────────────────────────────────────
+  // CORE: Documents (Days 7-11)
+  // ─────────────────────────────────────────────
+  // PORT uploads create documents with status:"processing",
+  // then processFile background job fills content fields
+  // and flips status to "ready".
+
   documents: defineTable({
-    // === USER & ORGANIZATION ===
-    userId: v.string(),                    // Clerk user ID (from JWT)
-    organizationId: v.optional(v.string()), // For teams (later)
-    vertical: v.string(),                   // "musician", "customer_support", "sales", etc.
-    
-    // === CONTENT ===
+    // Ownership
+    userId: v.string(),
+    organizationId: v.optional(v.string()), // Future: team workspaces
+    vertical: v.string(), // "musician", "customer_support", etc.
+
+    // Content
     title: v.string(),
-    content: v.string(),                    // Full text content (extracted from PDF on Day 11)
-    contentPlain: v.string(),               // Stripped HTML for search (searchable after Day 11 processing)
-    contentPreview: v.string(),             // First 200 chars for UI
-    
-    // === DUPLICATE DETECTION (Day 10) ===
-    contentHash: v.optional(v.string()),    // SHA-256 hash of title + content for duplicate detection
-    
-    // === METADATA ===
+    content: v.string(),
+    contentPlain: v.string(), // Stripped text for search index
+    contentPreview: v.string(), // First 200 chars for UI cards
+
+    // Duplicate detection
+    contentHash: v.optional(v.string()), // DJB2 hash of title + content
+
+    // Document type
     type: v.union(
-      v.literal("pdf"),                     // 📄 Day 11: PDF upload
-      v.literal("text"),                    // 📝 Day 11: .txt upload
-      v.literal("markdown"),                // 📋 Day 11: .md upload
+      v.literal("pdf"),
+      v.literal("text"),
+      v.literal("markdown"),
       v.literal("slack"),
       v.literal("google-doc"),
       v.literal("notion"),
       v.literal("confluence")
     ),
-    
-    // 🚢 DAY 11: Upload metadata stored here
+
+    // Source tracking
     source: v.object({
-      platform: v.string(),                 // Day 11: Set to "file_upload"
-      url: v.optional(v.string()),          // Not used for file uploads
-      importedAt: v.optional(v.number()),   // Day 11: Set to Date.now() on upload
-      importedBy: v.optional(v.string()),   // Day 11: Set to identity.subject (Clerk user ID)
+      platform: v.string(), // "manual", "file_upload", "api"
+      url: v.optional(v.string()),
+      importedAt: v.optional(v.number()),
+      importedBy: v.optional(v.string()),
     }),
-    
-    // === CHAOS THEORY METADATA (Days 16-20) ===
-    chaosMetadata: v.optional(v.object({
-      // Stage 1: Feature Extraction
-      features: v.optional(v.array(v.string())),  // ["troubleshooting", "api", "billing"]
-      
-      // Stage 2: Pattern Classification
-      patterns: v.optional(v.array(v.object({
-        type: v.string(),                   // "process", "reference", "troubleshooting"
-        confidence: v.number(),             // 0-1
-        keywords: v.array(v.string()),
-      }))),
-      
-      // Stage 3: Relationship Discovery
-      relatedDocs: v.optional(v.array(v.id("documents"))),
-      similarityScores: v.optional(v.array(v.number())),
-      
-      // Stage 4: Clustering
-      clusterIds: v.optional(v.array(v.id("clusters"))),
-      
-      // Stage 5: Predictive Metadata
-      predictedTopics: v.optional(v.array(v.string())),
-      accessFrequency: v.optional(v.number()),
-      lastAccessedAt: v.optional(v.number()),
-    })),
-    
-    // === SEARCH & TAGS ===
-    tags: v.array(v.string()),              // User-added tags
-    autoTags: v.optional(v.array(v.string())), // AI-generated tags
-    
-    // === STATUS (Day 11: Essential for upload flow!) ===
-    // 🚢 DAY 11: Upload workflow states
-    status: v.union(
-      v.literal("processing"),              // ⚙️ Day 11: PDF text extraction in progress
-      v.literal("ready"),                   // ✅ Day 11: Document processed and searchable
-      v.literal("error")                    // ❌ Day 11: Upload/processing failed
+
+    // LAMINAR chaos theory metadata (Days 16-20)
+    chaosMetadata: v.optional(
+      v.object({
+        // Stage 1: Feature extraction
+        features: v.optional(v.array(v.string())),
+        // Stage 2: Pattern classification
+        patterns: v.optional(
+          v.array(
+            v.object({
+              type: v.string(),
+              confidence: v.number(),
+              keywords: v.array(v.string()),
+            })
+          )
+        ),
+        // Stage 3: Relationships
+        relatedDocs: v.optional(v.array(v.id("documents"))),
+        similarityScores: v.optional(v.array(v.number())),
+        // Stage 4: Clustering
+        clusterIds: v.optional(v.array(v.id("clusters"))),
+        // Stage 5: Predictive
+        predictedTopics: v.optional(v.array(v.string())),
+        accessFrequency: v.optional(v.number()),
+        lastAccessedAt: v.optional(v.number()),
+      })
     ),
-    errorMessage: v.optional(v.string()),   // Day 11: Error details for debugging
-    
-    // === FILE STORAGE (Day 11: Core upload fields!) ===
-    // 📦 DAY 11: File upload essentials
-    fileId: v.optional(v.id("_storage")),   // Day 11: Convex storage ID (from upload)
-    fileSize: v.optional(v.number()),       // Day 11: File size in bytes (for validation)
-    mimeType: v.optional(v.string()),       // Day 11: "application/pdf", "text/plain", etc.
-    
-    // === TIMESTAMPS ===
-    createdAt: v.number(),                  // Day 11: When document record created
-    updatedAt: v.optional(v.number()),      // Updated when edited
-    processedAt: v.optional(v.number()),    // Day 11: When text extraction completed
-    
-    // === PRIVACY ===
-    isPublic: v.boolean(),                  // Can other users see it?
+
+    // Tags
+    tags: v.array(v.string()),
+    autoTags: v.optional(v.array(v.string())),
+
+    // Status (processing → ready | error)
+    status: v.union(
+      v.literal("processing"),
+      v.literal("ready"),
+      v.literal("error")
+    ),
+    errorMessage: v.optional(v.string()),
+
+    // File storage (populated for PORT uploads)
+    fileId: v.optional(v.id("_storage")),
+    fileSize: v.optional(v.number()),
+    mimeType: v.optional(v.string()),
+
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+    processedAt: v.optional(v.number()),
+
+    // Privacy
+    isPublic: v.boolean(),
   })
-    // === INDEXES FOR FAST QUERIES ===
-    .index("by_user", ["userId"])                      // Get user's docs
-    .index("by_user_vertical", ["userId", "vertical"]) // Filter by vertical
-    .index("by_user_and_status", ["userId", "status"]) // 🚢 Day 11: Find user's "processing" docs
-    .index("by_status", ["status"])                    // 🚢 Day 11: Find all processing docs globally
-    .index("by_organization", ["organizationId"])      // Team docs
-    .index("by_created", ["createdAt"])                // Sort by date
-    .index("by_user_and_hash", ["userId", "contentHash"]) // Duplicate detection
-    
-    // === FULL-TEXT SEARCH INDEX ===
-    // 🔍 DAY 11: Documents become searchable after text extraction
+    .index("by_user", ["userId"])
+    .index("by_user_vertical", ["userId", "vertical"])
+    .index("by_user_and_status", ["userId", "status"])
+    .index("by_status", ["status"])
+    .index("by_organization", ["organizationId"])
+    .index("by_created", ["createdAt"])
+    .index("by_user_and_hash", ["userId", "contentHash"])
     .searchIndex("search_content", {
-      searchField: "contentPlain",                     // Day 11: Extracted PDF text goes here
+      searchField: "contentPlain",
       filterFields: ["userId", "vertical", "type", "status"],
     }),
 
-  // === AI QUERY LOGS (Day 13) ===
-  // 🏮 LIGHTHOUSE: Track all questions asked to Claude API
+  // ─────────────────────────────────────────────
+  // CORE: AI Query Logs (Day 13)
+  // ─────────────────────────────────────────────
+  // LIGHTHOUSE tracks every question asked to Claude API.
+  // Used by queries.ts getUsageStats for analytics.
+
   queries: defineTable({
-    // === USER ===
-    userId: v.string(),                    // Clerk user ID (who asked the question)
-    
-    // === QUESTION & ANSWER ===
-    query: v.string(),                     // User's question to the LIGHTHOUSE
-    answer: v.string(),                    // Claude's response
-    
-    // === CONTEXT ===
-    documentIds: v.array(v.id("documents")), // Which docs were searched
-    
-    // === PERFORMANCE METRICS ===
-    tokensUsed: v.number(),                // Input + output tokens (for cost tracking)
-    responseTimeMs: v.number(),            // How long Claude took to respond
-    model: v.string(),                     // Which Claude model was used
-    
-    // === TIMESTAMP ===
-    timestamp: v.number(),                 // When the question was asked
+    userId: v.string(),
+    query: v.string(),
+    answer: v.string(),
+    documentIds: v.array(v.id("documents")),
+    tokensUsed: v.number(),
+    responseTimeMs: v.number(),
+    model: v.string(),
+    timestamp: v.number(),
   })
-    .index("by_user", ["userId"])          // Get user's query history
-    .index("by_timestamp", ["timestamp"])  // Sort queries by date
-    .index("by_user_and_timestamp", ["userId", "timestamp"]), // User's recent queries
+    .index("by_user", ["userId"])
+    .index("by_timestamp", ["timestamp"])
+    .index("by_user_and_timestamp", ["userId", "timestamp"]),
 
-  // ============================================================
-  // === LAMINAR TABLES (Day 16) — ARCHIPELAGOS Self-Organization
-  // ============================================================
-  // 🌊 LAMINAR Stage 1: Chaos theory-powered document clustering
-  // Documents auto-organize into ARCHIPELAGOS (knowledge islands)
-  // without manual folder creation. Uses TF-IDF + K-Means + softmax
-  // confidence scoring (autonomous systems sensor fusion pattern).
+  // ─────────────────────────────────────────────
+  // LAMINAR Stage 1: ARCHIPELAGOS (Day 16)
+  // ─────────────────────────────────────────────
+  // TF-IDF + K-Means + softmax confidence scoring.
+  // Documents auto-organize into knowledge islands.
 
-  // === CLUSTERING RUNS ===
-  // Tracks each execution of the LAMINAR algorithm.
-  // One record per time the clustering pipeline runs.
+  /** Tracks each execution of the clustering pipeline. */
   clusteringRuns: defineTable({
-    userId: v.string(),                    // Clerk user ID (who triggered clustering)
+    userId: v.string(),
     status: v.union(
-      v.literal("running"),                // ⚙️ Pipeline in progress
-      v.literal("completed"),              // ✅ ARCHIPELAGOS charted successfully
-      v.literal("failed")                  // ❌ Stormy seas — pipeline error
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed")
     ),
-    documentCount: v.number(),             // How many documents were clustered
-    clusterCount: v.number(),              // How many ARCHIPELAGOS were discovered
-    silhouetteScore: v.optional(v.number()), // Clustering quality: -1 to +1 (target > 0.3)
-    startedAt: v.number(),                 // Pipeline start timestamp
-    completedAt: v.optional(v.number()),   // Pipeline end timestamp
-    error: v.optional(v.string()),         // Error message if status === "failed"
+    documentCount: v.number(),
+    clusterCount: v.number(),
+    silhouetteScore: v.optional(v.number()), // -1 to +1 (target > 0.3)
+    startedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
   })
     .index("by_user", ["userId"])
     .index("by_user_status", ["userId", "status"]),
 
-  // === CLUSTERS (ARCHIPELAGOS) ===
-  // The knowledge islands themselves — each cluster represents a
-  // thematic grouping of documents discovered by LAMINAR.
+  /** Knowledge islands — thematic groupings discovered by LAMINAR. */
   clusters: defineTable({
-    userId: v.string(),                    // Cluster owner
-    runId: v.id("clusteringRuns"),         // Which run produced this cluster
-    name: v.string(),                      // Derived from top keywords (e.g., "mixing & reverb & vocals")
-    description: v.optional(v.string()),   // Optional summary of cluster contents
-    documentCount: v.number(),             // Documents in this ARCHIPELAGO
-    topKeywords: v.array(v.string()),      // Top TF-IDF terms for this cluster
-    centroid: v.array(v.number()),         // TF-IDF centroid vector (for distance calculations)
-    coherenceScore: v.number(),            // Per-cluster silhouette (displayed as "coherence")
-    color: v.optional(v.string()),         // For UI visualization (auto-assigned)
+    userId: v.string(),
+    runId: v.id("clusteringRuns"),
+    name: v.string(), // Derived from top keywords
+    description: v.optional(v.string()),
+    documentCount: v.number(),
+    topKeywords: v.array(v.string()),
+    centroid: v.array(v.number()), // TF-IDF centroid vector
+    coherenceScore: v.number(), // Per-cluster silhouette
+    color: v.optional(v.string()), // UI visualization
     createdAt: v.number(),
   })
     .index("by_user", ["userId"])
     .index("by_run", ["runId"]),
 
-  // === CLUSTER MEMBERSHIPS ===
-  // Probabilistic membership — the key autonomous systems enhancement.
-  // Instead of binary "doc belongs to cluster 3," we store a full
-  // probability distribution: 72% cluster A, 18% cluster B, 10% cluster C.
-  // This is the sensor fusion pattern from EKF navigation systems.
+  /**
+   * Probabilistic memberships — sensor fusion pattern.
+   * Instead of binary assignment, stores full probability distribution:
+   * 72% cluster A, 18% cluster B, 10% cluster C.
+   */
   clusterMemberships: defineTable({
-    userId: v.string(),                    // For auth filtering
-    documentId: v.id("documents"),         // Which document
-    clusterId: v.id("clusters"),           // Which ARCHIPELAGO
-    runId: v.id("clusteringRuns"),         // Which run produced this membership
-    probability: v.number(),               // 0.0–1.0 from softmax (sensor fusion confidence)
-    isPrimary: v.boolean(),                // Highest probability cluster for this document?
-    isAmbiguous: v.boolean(),              // Top two clusters within 15%? (bridge document)
+    userId: v.string(),
+    documentId: v.id("documents"),
+    clusterId: v.id("clusters"),
+    runId: v.id("clusteringRuns"),
+    probability: v.number(), // 0.0–1.0 from softmax
+    isPrimary: v.boolean(), // Highest probability cluster?
+    isAmbiguous: v.boolean(), // Top two within 15%? (bridge document)
     assignedAt: v.number(),
   })
-    .index("by_document", ["documentId"])  // All clusters a doc belongs to
-    .index("by_cluster", ["clusterId"])    // All docs in a cluster
-    .index("by_user", ["userId"])          // User's memberships
-    .index("by_run", ["runId"]),           // All memberships from a run
+    .index("by_document", ["documentId"])
+    .index("by_cluster", ["clusterId"])
+    .index("by_user", ["userId"])
+    .index("by_run", ["runId"]),
 
-  // === CLUSTER HISTORY ===
-  // Tracks how ARCHIPELAGOS evolve over time across clustering runs.
-  // Pre-built for Day 17 (CURRENTS — temporal pattern detection).
-  // "Schema now, logic later" pattern from autonomous systems spec.
+  /** Tracks how clusters evolve across runs (pre-built for Day 17). */
   clusterHistory: defineTable({
-    clusterId: v.id("clusters"),           // Which ARCHIPELAGO
-    runId: v.id("clusteringRuns"),         // Which run snapshot
-    membershipCount: v.number(),           // How many docs at this point in time
-    accessCount: v.number(),               // Total access events (populated Day 17+)
-    coherenceScore: v.number(),            // Cluster quality at this snapshot
-    timestamp: v.number(),                 // When this snapshot was recorded
+    clusterId: v.id("clusters"),
+    runId: v.id("clusteringRuns"),
+    membershipCount: v.number(),
+    accessCount: v.number(), // Populated Day 17+
+    coherenceScore: v.number(),
+    timestamp: v.number(),
   })
     .index("by_cluster", ["clusterId"])
     .index("by_cluster_time", ["clusterId", "timestamp"]),
 
-  // ADD to convex/schema.ts — inside defineSchema({...})
+  // ─────────────────────────────────────────────
+  // LAMINAR Stage 2: CURRENTS (Day 17)
+  // ─────────────────────────────────────────────
+  // Temporal pattern detection: access trajectories,
+  // co-occurrence tracking, relevance prediction.
 
-  // Day 17: Temporal Pattern Detection
+  /** Raw access events — the behavioral signal for LAMINAR. */
   accessEvents: defineTable({
     documentId: v.id("documents"),
     userId: v.string(),
@@ -250,20 +258,21 @@ export default defineSchema({
     .index("by_session", ["sessionId"])
     .index("by_timestamp", ["timestamp"]),
 
+  /** Computed access trajectories per document. */
   temporalPatterns: defineTable({
     userId: v.string(),
     documentId: v.id("documents"),
-    accessRate: v.number(),           // accesses per day (current window)
-    rateOfChange: v.number(),         // acceleration/deceleration
+    accessRate: v.number(), // Accesses per day (current window)
+    rateOfChange: v.number(), // Acceleration/deceleration
     trend: v.union(
       v.literal("rising"),
       v.literal("stable"),
       v.literal("declining"),
       v.literal("periodic")
     ),
-    periodicity: v.optional(v.number()),  // days between peaks, if periodic
-    predictedRelevance: v.number(),       // 0-1 score for T+7 prediction
-    lastComputed: v.number(),             // when this pattern was last calculated
+    periodicity: v.optional(v.number()), // Days between peaks
+    predictedRelevance: v.number(), // 0-1 score for T+7
+    lastComputed: v.number(),
     totalAccesses: v.number(),
   })
     .index("by_user", ["userId"])
@@ -271,16 +280,86 @@ export default defineSchema({
     .index("by_user_and_document", ["userId", "documentId"])
     .index("by_user_and_trend", ["userId", "trend"]),
 
-  // Co-occurrence: which documents are accessed together?
+  /** Which documents are accessed together within sessions? */
   cooccurrences: defineTable({
     userId: v.string(),
     documentA: v.id("documents"),
     documentB: v.id("documents"),
-    count: v.number(),                // how many sessions they co-occurred in
-    lastSeen: v.number(),             // last session timestamp
-    strength: v.number(),             // normalized 0-1 co-occurrence strength
+    count: v.number(), // Sessions they co-occurred in
+    lastSeen: v.number(),
+    strength: v.number(), // Normalized 0-1
   })
     .index("by_user", ["userId"])
     .index("by_document_a", ["userId", "documentA"])
     .index("by_document_b", ["userId", "documentB"]),
+
+  // ─────────────────────────────────────────────
+  // LAMINAR Stage 3: Cross-Document Intelligence (Day 18)
+  // ─────────────────────────────────────────────
+  // Knowledge graph edges combining 4 signal types:
+  // content similarity, temporal proximity, co-access,
+  // and structural links. Multi-signal fusion architecture.
+
+  /**
+   * Weighted edges in the knowledge graph.
+   * Each edge stores both the combined weight and the per-signal
+   * breakdown so the system can learn which signals matter most.
+   */
+  knowledgeEdges: defineTable({
+    userId: v.string(),
+    sourceDocId: v.id("documents"),
+    targetDocId: v.id("documents"),
+    weight: v.number(), // Combined 0-1 score
+    // Per-signal breakdown (for adaptive weighting)
+    signals: v.object({
+      contentSimilarity: v.number(), // TF-IDF cosine similarity
+      temporalProximity: v.number(), // Access time correlation
+      coAccessStrength: v.number(), // From cooccurrences table
+      structuralLink: v.number(), // Shared clusters, tags, etc.
+    }),
+    isBridge: v.boolean(), // Connects otherwise separate clusters?
+    lastComputed: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_source", ["userId", "sourceDocId"])
+    .index("by_target", ["userId", "targetDocId"]),
+
+  // ─────────────────────────────────────────────
+  // LAMINAR Stage 4: Butterfly Effect (Day 19)
+  // ─────────────────────────────────────────────
+  // Cascade prediction: when a document changes, which
+  // other documents might be affected? BFS traversal
+  // with exponential decay across the knowledge graph.
+
+  /** One record per cascade analysis run. */
+  cascadeRuns: defineTable({
+    userId: v.string(),
+    sourceDocId: v.id("documents"), // Document that triggered analysis
+    status: v.union(
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed")
+    ),
+    totalAffected: v.number(), // Documents above threshold
+    maxDepth: v.number(), // Deepest cascade level reached
+    decayRate: v.number(), // Decay factor used (default 0.8)
+    threshold: v.number(), // Minimum impact threshold (default 0.3)
+    createdAt: v.number(),
+    completedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_source", ["userId", "sourceDocId"]),
+
+  /** Individual impact predictions from a cascade run. */
+  cascadeImpacts: defineTable({
+    userId: v.string(),
+    runId: v.id("cascadeRuns"),
+    documentId: v.id("documents"), // Affected document
+    impactScore: v.number(), // 0-1 propagated impact
+    depth: v.number(), // Hops from source document
+    pathDescription: v.optional(v.string()), // Human-readable path
+  })
+    .index("by_run", ["runId"])
+    .index("by_document", ["userId", "documentId"]),
 });

@@ -1,10 +1,18 @@
 {
-  /* This TypeScript project config describes the environment that
-   * Convex functions run in and is used to typecheck them.
-   * You can modify it, but some settings are required to use Convex.
+  /* 
+   * VELA — Convex TypeScript Configuration
+   * 
+   * Describes the environment Convex functions run in.
+   * Tuned for strict type safety across LAMINAR algorithm code
+   * (TF-IDF vectors, K-Means clustering, softmax confidence scoring)
+   * and standard Convex queries/mutations/actions.
+   *
+   * ⚠️  Options marked "Required by Convex" must not be changed.
    */
   "compilerOptions": {
-    /* These settings are not required by Convex and can be modified. */
+    /* ───────────────────────────────────────────────
+     * Modifiable — tuned for VELA
+     * ─────────────────────────────────────────────── */
     "allowJs": true,
     "strict": true,
     "moduleResolution": "Bundler",
@@ -12,7 +20,18 @@
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
 
-    /* These compiler options are required by Convex */
+    /* Additional strictness — catches real bugs in LAMINAR math */
+    "noUncheckedIndexedAccess": true,        /* vectors[i] returns T | undefined — forces null checks on array access */
+    "noUnusedLocals": true,                  /* flag dead variables after refactors */
+    "noUnusedParameters": true,              /* flag unused fn params (prefix with _ to silence) */
+    "noFallthroughCasesInSwitch": true,      /* prevent accidental switch fallthrough */
+    "exactOptionalPropertyTypes": true,      /* v.optional() fields can't be set to undefined — must omit or use correct type */
+    "resolveJsonModule": true,               /* allow importing .json files (stop word lists, test fixtures) */
+    "verbatimModuleSyntax": false,           /* keep compatible with Convex's module handling */
+
+    /* ───────────────────────────────────────────────
+     * Required by Convex — DO NOT CHANGE
+     * ─────────────────────────────────────────────── */
     "target": "ESNext",
     "lib": ["ES2021", "dom"],
     "forceConsistentCasingInFileNames": true,
@@ -20,6 +39,10 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["./**/*"],
-  "exclude": ["./_generated"]
+  "include": [
+    "./**/*"
+  ],
+  "exclude": [
+    "./_generated"
+  ]
 }

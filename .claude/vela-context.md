@@ -1,64 +1,71 @@
 # VELA Project Context
 
-Deep context for AI assistants working on the VELA codebase.
+Deep context for AI assistants working on the VELA codebase. This is the companion to `CLAUDE.md` — while CLAUDE.md covers rules, patterns, and anti-patterns, this file covers domain knowledge, product context, implementation history, and cross-stage dependencies.
+
+**Last Updated:** February 21, 2026 (Day 18 of 30-day sprint)
 
 ## Product Domain
 
-VELA is a knowledge management platform for knowledge workers (beachhead: musicians). Users upload documents (PDF, text, markdown), search across them, and ask AI-powered questions that return cited answers from their knowledge base.
+VELA is a knowledge management platform for knowledge workers (beachhead: musicians). Users upload documents (PDF, text, markdown), search across them, and ask AI-powered questions that return cited answers from their knowledge base. The platform's differentiator is LAMINAR — a chaos theory–powered algorithm that makes documents self-organize into clusters (ARCHIPELAGOS), tracks access patterns (CURRENTS), and builds a knowledge graph connecting related content.
 
 **Mission**: Instantly connect knowledge workers with answers across scattered documents.
-**Expansion path**: Musicians → Customer Support → Sales → Medical → Legal
+**Positioning**: "ChatGPT for company knowledge" / "Stop searching, start navigating"
+**Expansion path**: Musicians → Customer Support → Sales → Medical → Legal → 11+ verticals
+
+**90% code reuse architecture**: Core platform is shared across all verticals. Only onboarding language, example templates, industry-specific search filters, and integration connectors are customized per vertical (~10%).
 
 ## Brand Requirements
 
-- Colors: ONLY Navy `#1B3D5C` and Teal `#00BCD4`
-- Terminology: Use "ARCHIPELAGOS" not "clusters" when referring to document groupings
-- Messaging: Nautical theme, no corporate jargon
-- Loading: Wave animations, NEVER generic spinners
-
-## Nautical Naming Convention
-
-Every user-facing feature uses a nautical metaphor. Maintain this consistently in UI copy, error messages, and component naming.
-
-| Feature         | Codename      | Meaning                               |
-|-----------------|---------------|---------------------------------------|
-| Dashboard       | HELM          | Ship's control center                 |
-| Document Upload | PORT          | Ships arrive at port with cargo       |
-| Full-text Search| COMPASS       | Navigation tool for finding direction |
-| AI Q&A          | LIGHTHOUSE    | Guiding beacon illuminating knowledge |
-| Related Docs    | CURRENTS      | Ocean flows connecting information    |
-| Doc Groupings   | ARCHIPELAGOS  | Islands of related knowledge          |
-| User            | CAPTAIN       | Commander of their knowledge vessel   |
-
-Error messages use nautical metaphors (e.g., "High tide of requests", "Stormy seas encountered").
+- **Colors**: ONLY Navy `#1B3D5C` and Teal `#00BCD4`. See CLAUDE.md for complete palette and forbidden colors.
+- **Terminology**: Use nautical names in all user-facing copy. See full naming table in CLAUDE.md.
+- **Messaging**: Nautical theme — "navigate", "discover", "illuminate". No corporate jargon — never "optimize", "workflow", "efficiency".
+- **Loading**: Wave/pulse animations using LAMINAR gradient. NEVER generic spinners.
+- **Voice**: "The Knowledgeable Captain" — confident guide who respects user autonomy. Sophisticated but not corporate, intelligent but not cold.
 
 ## Current Status
 
-- Day 16 of 30 (53% complete)
-- Phase: LAMINAR Algorithm (Days 16-20)
-- Next: Implement Stage 1 (Self-Organization with TF-IDF + K-Means)
+```
+Phase 1: FOUNDATION (Days 1-5)        ████████████████████ 100% ✅
+Phase 2: INFRASTRUCTURE (Days 6-8)    ████████████████████ 100% ✅
+Phase 3: CORE FEATURES (Days 9-15)    ████████████████████ 100% ✅
+Phase 4: DIFFERENTIATION (Days 16-20) ████████████░░░░░░░░  60% 🔧 ← YOU ARE HERE
+Phase 5: POLISH & BILLING (Days 21-25)                          🔒
+Phase 6: LAUNCH (Days 26-30)                                    🔒
+```
+
+- **Day 18 of 30** (60% complete)
+- **Phase**: LAMINAR Algorithm — Stage 3 (Cross-Document Intelligence) in progress
+- **Shipped**: PORT, COMPASS, LIGHTHOUSE, ARCHIPELAGOS (Day 16), CURRENTS (Day 17)
+- **Building**: Knowledge Graph / CHARTS (Day 18)
+- **Next**: Butterfly Effect cascade prediction (Day 19)
 
 ## 30-Day Sprint Context
 
-Development started January 19, 2026. The project follows a phased sprint:
+Development started January 19, 2026.
 
-- **Days 1-10** (Foundation): Next.js, Convex, Clerk auth — COMPLETE
-- **Days 11-15** (Core Features): Upload, search, Claude AI, LIGHTHOUSE — COMPLETE
-- **Days 16-20** (LAMINAR Algorithm): Self-organizing ARCHIPELAGOS, pattern detection — IN PROGRESS
-- **Days 21-30** (Launch): Stripe billing, analytics, marketing, Product Hunt — PLANNED
-
-The `chaosMetadata` field on documents is reserved for the LAMINAR algorithm (Days 16-20) and is currently unused.
+| Phase | Days | Focus | Status |
+|---|---|---|---|
+| Foundation | 1-5 | JS fundamentals, async/await, API patterns | ✅ |
+| Infrastructure | 6-8 | Next.js 16 + Convex + Clerk auth | ✅ |
+| Core Features | 9-15 | PORT, COMPASS, LIGHTHOUSE, real-time sync | ✅ |
+| LAMINAR Stage 1 | 16 | ARCHIPELAGOS — TF-IDF + K-Means clustering | ✅ Shipped |
+| LAMINAR Stage 2 | 17 | CURRENTS — temporal patterns, co-occurrence | ✅ Shipped |
+| LAMINAR Stage 3 | 18 | Knowledge graph, bridges, attractors | 🔧 In Progress |
+| LAMINAR Stage 4 | 19 | Butterfly Effect — cascade prediction | 📋 Planned |
+| LAMINAR Stage 5 | 20 | Fractal Wisdom — multi-scale patterns | 📋 Planned |
+| Polish & Billing | 21-25 | Stripe, analytics, UI refinement | 🔒 |
+| Launch | 26-30 | Marketing, Product Hunt, documentation | 🔒 |
 
 ## Convex Backend Patterns
 
 ### Function Types
-- **query** — Read-only, real-time subscribed via WebSocket. Use for data fetching.
-- **mutation** — Transactional writes. Cannot call external APIs.
-- **action** — Can call external APIs (Claude, etc.) but NOT directly read/write DB. Must use `ctx.runQuery()` / `ctx.runMutation()` to access data.
-- **internalQuery/internalMutation/internalAction** — Not exposed to client. Used for background jobs (e.g., `processFile`).
+- **query** — Read-only, real-time subscribed via WebSocket. Use for data fetching. Returns reactive data that auto-updates across all connected clients.
+- **mutation** — Transactional writes. Cannot call external APIs. Use for database operations.
+- **action** — Can call external APIs (Claude, etc.) but NOT directly read/write DB. Must use `ctx.runQuery()` / `ctx.runMutation()` to access data. Used for LAMINAR orchestration and AI calls.
+- **internalQuery/internalMutation/internalAction** — Not exposed to client. Used for background jobs (e.g., `processFile`) and LAMINAR pipeline stages.
 
 ### Authentication Pattern
-Every public query/mutation must start with:
+Every public query/mutation MUST start with:
 ```typescript
 const identity = await ctx.auth.getUserIdentity();
 if (!identity) throw new Error("Not authenticated");
@@ -72,6 +79,18 @@ File uploads use a two-phase pattern:
 2. Internal action (`processFile`) extracts text, then calls an internal mutation to update content and set `status: "ready"`
 
 Use `ctx.scheduler.runAfter(0, internal.module.function, args)` to schedule background work from mutations.
+
+### LAMINAR Orchestration Pattern
+All LAMINAR stages (Days 16-18+) follow an action → internal mutation pipeline:
+
+1. **Action** (exposed to client): handles auth, creates a "run" record, orchestrates the pipeline
+2. **Pure functions** (imported, no Convex ctx): TF-IDF, K-Means, graph algorithms — pure computation
+3. **Internal mutations** (batch inserts): store results in batches of 25 (Convex ~8KB argument limit)
+4. **Run status update**: mark run as "complete" or "error"
+
+This pattern lives in `engine.ts` (Day 16), `temporalRunner.ts` (Day 17), and `graphRunner.ts` (Day 18). See CLAUDE.md for the code template.
+
+**Critical**: Actions referencing `internal.*` from the same file MUST have explicit `Promise<ReturnType>` return type annotations to avoid TS7022 circular inference errors.
 
 ### Search
 Full-text search uses Convex's `searchIndex` on the `contentPlain` field:
@@ -96,13 +115,20 @@ const docs = useQuery(api.documents.list, isAuthenticated ? {} : "skip");
 // Mutations (writes)
 const create = useMutation(api.documents.create);
 
-// Actions (server-side operations like AI calls)
+// Actions (server-side operations like AI calls, LAMINAR pipelines)
 const ask = useAction(api.ai.askQuestion);
+const runClustering = useAction(api.laminar.engine.runClustering);
+```
+
+**Critical**: `useQuery` returns `undefined` while loading. Always handle this:
+```typescript
+if (data === undefined) return <LoadingState />; // wave animation, not spinner
+if (data.length === 0) return <EmptyState />;    // "Still waters..." copy
 ```
 
 ### Component Organization
 - `src/components/ui/` — Shadcn UI primitives (button, card, dialog, etc.). Do not modify directly.
-- `src/components/` — App-level components (lighthouse-search, upload-zone, user-setup)
+- `src/components/` — App-level components (lighthouse-search, upload-zone, user-setup, knowledge-graph-panel)
 - `src/components/dashboard/` — Dashboard-specific components
 - `src/components/shared/` — Reusable app components
 - `src/components/marketing/` — Landing page components
@@ -111,7 +137,7 @@ const ask = useAction(api.ai.askQuestion);
 - Tailwind CSS 4 with VELA brand colors via CSS variables
 - Primary navy: `#1B3D5C` (backgrounds, text)
 - Accent teal: `#00BCD4` (interactive elements, CTAs)
-- Navy-to-teal gradients for premium features (LIGHTHOUSE nav link)
+- Navy-to-teal gradients for LAMINAR features and premium branding
 - Dark mode via `next-themes` (class-based strategy)
 - Shadcn UI uses "new-york" style variant
 
@@ -123,16 +149,142 @@ Two modes in `convex/ai.ts`:
 
 Both call Claude Sonnet 4 via `@anthropic-ai/sdk` and log results to the `queries` table for analytics.
 
-Constraints:
+**Constraints:**
 - Max 20 documents per query (`MAX_DOCUMENTS`)
 - Max 8000 chars per document in context (`MAX_CHARS_PER_DOC`)
 - Max 1000 char queries (`MAX_QUERY_LENGTH`)
 - Default 2048 max response tokens
+- Retry logic with exponential backoff (3 retries)
+
+## LAMINAR Implementation History
+
+### Day 16: ARCHIPELAGOS — What Shipped
+
+**Result**: 7 documents clustered in 202ms, K=2, silhouette score 0.1531, converged in 1 iteration.
+
+**Files created** (all in `convex/laminar/`):
+- `tfidf.ts` — TF-IDF vectorization engine (835 terms extracted from 7 docs). Exports: `tokenize`, `buildVocabulary`, `computeTFIDF`, `cosineSimilarity`. Pure TS, zero external deps.
+- `kmeans.ts` — K-Means clustering with K-Means++ initialization. Exports: `kMeansCluster`, `calculateSilhouette`, `suggestK`.
+- `confidence.ts` — Probabilistic membership via softmax. Exports: `distancesToProbabilities`, `calculateMemberships`.
+- `engine.ts` — Convex action orchestrating the full pipeline.
+- `queries.ts` — Real-time queries: `listClusters`, `getClusteringStatus`, `getClusterMembers`, etc.
+
+**Schema tables added**: `clusteringRuns`, `clusters`, `clusterMemberships`, `clusterHistory`
+
+**UI**: `app/(dashboard)/archipelagos/page.tsx` — cluster cards with expand/collapse, navigation confidence bar, "Re-chart ARCHIPELAGOS" button.
+
+**Bugs discovered and fixed**:
+- **TS7022 circular inference**: Actions using `internal.*` from the same file caused TypeScript circular type inference. Fix: explicit `Promise<ReturnType>` annotation on handler. Added to CLAUDE.md anti-patterns.
+- **Batch size limit**: Initial batch of 50 items per mutation exceeded Convex's ~8KB argument limit. Fix: reduced to 25 items per batch.
+- **Nav link**: Added "ISLANDS" link to dashboard navigation (desktop + mobile).
+
+**What Claude Code got right on first try**: TF-IDF algorithm, K-Means++ initialization, softmax confidence scoring. The pure math was solid.
+
+**What needed manual fixes**: TS7022 return type issue, batch size, some brand color violations (used generic blue instead of Navy), and a few missing auth checks.
+
+### Day 17: CURRENTS — What Shipped
+
+**Files created**:
+- `temporal.ts` — Access trajectory estimation: rising/stable/declining/periodic trends. `estimateAccessTrajectory()`, `detectPeriodicity()`, `predictRelevance()`.
+- `cooccurrence.ts` — Co-occurrence tracking. `trackCoAccess()`, `buildCoOccurrenceMatrix()`, `suggestRelated()`.
+- `temporalRunner.ts` — Orchestration action for temporal analysis pipeline.
+
+**Schema tables added**: `accessEvents`, `temporalPatterns`, `cooccurrences`
+
+**Key implementation details**:
+- Access events are logged **silently** on all document touchpoints (view, search, ai_query) — no user action required.
+- Co-occurrence uses session-based grouping: documents accessed within same session are linked.
+- Trajectory estimation models access as state estimation (rate + rate of change), not just discrete events.
+- CURRENTS panel integrated into document detail view (`documents/[id]/page.tsx`).
+
+### Day 18: Knowledge Graph — In Progress
+
+**Goal**: Build a weighted knowledge graph connecting documents via 4 signal types, detect bridge documents spanning multiple clusters, and identify attractor states (Knowledge Centers).
+
+**Files being created**:
+- `graph.ts` — `buildKnowledgeGraph()`, `calculateDegreeCentrality()`, `calculateAttractorScore()`
+- `bridges.ts` — `detectBridges()` (dual-condition), `classifyDocumentRole()`
+- `graphRunner.ts` — Orchestration action for graph pipeline
+- `graphQueries.ts` — Reactive queries for graph data
+
+**Schema tables being added**: `knowledgeEdges`, `graphRuns`, `documentMetrics`
+
+**See CLAUDE.md for**: signal weights, thresholds, attractor formulas, cascade amplifier mapping.
+
+## Cross-Stage Data Dependencies
+
+This is critical context for any work touching LAMINAR — each stage builds on previous outputs:
+
+```
+Day 16 (ARCHIPELAGOS)
+├── clusters → Day 18 needs cluster IDs for bridge detection
+├── clusterMemberships → Day 18 uses isAmbiguous + probability scores
+├── tfidf.ts exports → Day 18 imports cosineSimilarity for content edges
+└── clusteringRuns → Day 18 references latest run for current state
+
+Day 17 (CURRENTS)
+├── accessEvents → Day 18 uses for access frequency + temporal consistency
+├── cooccurrences → Day 18 uses for behavioral edge signal
+└── temporalPatterns → Day 18 uses for trajectory-aware attractor scoring
+
+Day 18 (Knowledge Graph)
+├── knowledgeEdges → Day 19 uses for BFS cascade traversal
+├── documentMetrics.attractorScore → Day 19 uses as cascade amplifier
+└── documentMetrics.attractorTier → Day 19 maps to cascade radius + urgency
+```
+
+**If any upstream data is missing**, Day 18 health check pattern applies:
+1. Query the table to check count
+2. If below minimum threshold, generate synthetic data via `seedData.ts`
+3. Minimum thresholds: accessEvents ≥50 events across ≥10 docs, cooccurrences ≥5 non-zero pairs, documents ≥5
+
+## Pricing Model
+
+| Tier | Price | Limits | Target |
+|---|---|---|---|
+| Free | $0 | 10 documents, 20 queries/month | Trial users |
+| Starter | $10/month | 100 documents, unlimited queries | Individual musicians |
+| Pro | $25/month | Unlimited docs, LAMINAR clustering, priority AI | Power users, small teams |
+
+Revenue target: $10K MRR by month 6.
 
 ## Known Limitations
 
-- PDF text extraction is currently a placeholder (module resolution issue with pdf-parse in Convex runtime). Text/markdown files work fully.
-- No pagination on document list queries
-- No test framework configured
-- `vertical` field defaults to "musician" for all uploaded documents
-- The README schema example is simplified and doesn't match the actual `convex/schema.ts` — always reference the real schema file
+- **PDF text extraction**: Currently a placeholder due to module resolution issue with `pdf-parse` in Convex runtime. Text/markdown files work fully. PDF upload creates the document record but text extraction is partial.
+- **No pagination**: Document list queries return all documents. Needs pagination for users with 100+ docs.
+- **No test framework**: No Jest, Vitest, or other test runner configured. Validation is manual integration testing.
+- **Vertical field**: Defaults to "musician" for all uploaded documents (beachhead market assumption).
+- **Schema drift in docs**: Some project knowledge files contain outdated schema examples (e.g., `organizationId` field, `clerkUserId` field name). The **actual schema** is always in `convex/schema.ts` — reference that file directly, never documentation examples.
+- **LAMINAR cold-start**: With few documents (<10) and no usage history, behavioral/temporal signals are near-zero. System is designed content-first (0.60 weight) with signals that grow as usage accumulates.
+- **O(n²) graph scaling**: Knowledge graph edge computation is O(n²) for document pairs. Guard at 200 documents; above that, partition by cluster.
+
+## Development Patterns Discovered
+
+### What Works Well
+1. **Schema-first development**: Write Convex tables by hand before any algorithm work. Deploy with `npx convex dev` to validate types immediately.
+2. **Sequential Claude Code delegation**: One file per prompt, review before proceeding. Never generate 5 files in one session.
+3. **Pure function extraction**: Keep math (TF-IDF, K-Means, graph algorithms) in pure functions importable without Convex context. Test mentally, then wire into actions.
+4. **Internal mutation pipeline**: Actions orchestrate, internal mutations write. Keeps actions focused and mutations transactional.
+5. **Silent logging**: Access events logged transparently on every document touchpoint without user awareness. Builds behavioral data from day one.
+
+### What Failed / Needed Fixing
+1. **Large batch inserts**: 50 items per mutation hit Convex's argument limit. Always use 25.
+2. **Missing return type annotations**: TS7022 error on any action that references `internal.*` from same file. Always annotate explicitly.
+3. **Brand drift in generated code**: Claude Code defaults to generic `blue-500` colors. Must specify exact hex values in every frontend prompt.
+4. **Assuming schema from docs**: Project knowledge files contain aspirational/outdated schema. Always `grep` the actual `convex/schema.ts` before building anything.
+5. **Overloading single mutations**: Early attempts put too much logic in mutations. Better pattern: actions for orchestration, mutations for simple writes.
+
+## Git Conventions
+
+```bash
+# Feature commits
+git commit -m "feat(day-18): knowledge graph schema + health check"
+
+# Bug fixes
+git commit -m "fix: TS7022 explicit return type on engine.ts handler"
+
+# Day completion tags
+git tag -a day-18-knowledge-graph -m "Day 18: LAMINAR Stage 3"
+```
+
+Conventional commits with day prefix for LAMINAR work. Tag each completed day.

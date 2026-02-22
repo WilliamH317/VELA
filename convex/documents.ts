@@ -1,44 +1,41 @@
-// convex/documents.ts - Complete Document Management
-// Days 7-11: Queries, Mutations, and File Upload
+// convex/documents.ts — Document Management (PORT + COMPASS)
+//
+// Core CRUD operations for VELA's document system:
+//   - list / getById / search — Queries (real-time, cached)
+//   - create / createFromFile — Mutations (transactional writes)
+//   - generateUploadUrl — Mutation (signed URL for client upload)
+//   - processFile — Internal action (background text extraction)
+//
+// Auth pattern: queries return [] or null on unauthenticated (graceful failure).
+// Mutations throw — the client shouldn't call them unauthenticated.
 
-import { query, mutation, action, internalAction, internalMutation, internalQuery } from "./_generated/server";
+import {
+  query,
+  mutation,
+  internalAction,
+  internalMutation,
+  internalQuery,
+} from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 
 // ===================================================================
-// EXISTING QUERIES & MUTATIONS (Days 7-10)
+// QUERIES
 // ===================================================================
 
 /**
- * DEBUG: Check authentication status
- * Useful for debugging JWT/Clerk integration
- */
-export const debugAuth = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    
-    return {
-      hasIdentity: !!identity,
-      subject: identity?.subject,
-      issuer: identity?.issuer,
-      tokenIdentifier: identity?.tokenIdentifier,
-    };
-  },
-});
-
-/**
- * LIST: Get all user's documents
- * Returns documents in reverse chronological order
+ * LIST: Get all user's documents.
+ * Returns documents in reverse chronological order.
+ * Returns [] if unauthenticated (graceful for loading states).
  */
 export const list = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      return [];
     }
-    
+
     return await ctx.db
       .query("documents")
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
@@ -48,47 +45,128 @@ export const list = query({
 });
 
 /**
- * CREATE: Manually create document (text input)
- * Used for creating documents without file upload
- * Includes duplicate detection
+ * GET BY ID: Fetch a single document for viewing.
+ * Returns null if not found or not owned by the user.
+ */
+export const getById = query({
+  args: { id: v.id("documents") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
+
+    const document = await ctx.db.get(args.id);
+
+    // Verify ownership
+    if (!document || document.userId !== identity.subject) {
+      return null;
+    }
+
+    return document;
+  },
+});
+
+/**
+ * COMPASS Search — Full-text search across user's documents.
+ * Uses Convex search index for fast, relevant results.
+ * Returns top 20 results ordered by relevance.
+ */
+export const search = query({
+  args: {
+    query: v.string(),
+    type: v.optional(
+      v.union(v.literal("pdf"), v.literal("text"), v.literal("markdown"))
+    ),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return [];
+    }
+
+    const trimmedQuery = args.query.trim();
+    if (trimmedQuery.length === 0) {
+      return [];
+    }
+
+    const searchQuery = ctx.db
+      .query("documents")
+      .withSearchIndex("search_content", (q) =>
+        q.search("contentPlain", trimmedQuery).eq("userId", identity.subject)
+      );
+
+    // Type filter requires in-memory filtering (search index limitation)
+    if (args.type) {
+      const results = await searchQuery.take(100);
+      return results.filter((doc) => doc.type === args.type).slice(0, 20);
+    }
+
+    return await searchQuery.take(20);
+  },
+});
+
+/**
+ * DEBUG: Check authentication status.
+ * Internal-only — not exposed to clients in production.
+ * Run from Convex dashboard for troubleshooting.
+ */
+export const debugAuth = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+
+    return {
+      hasIdentity: !!identity,
+      subject: identity?.subject,
+      issuer: identity?.issuer,
+      tokenIdentifier: identity?.tokenIdentifier,
+    };
+  },
+});
+
+// ===================================================================
+// MUTATIONS — Manual Document Creation
+// ===================================================================
+
+/**
+ * CREATE: Manually create a document (text input).
+ * Includes duplicate detection via content hash.
+ *
+ * ⚠️  The insert payload below MUST match your deployed documents schema.
+ *     If you've added/removed optional fields, update accordingly.
+ *     Optional fields are OMITTED (not set to undefined) to satisfy
+ *     exactOptionalPropertyTypes.
  */
 export const create = mutation({
   args: {
     title: v.string(),
     content: v.string(),
     vertical: v.string(),
-    type: v.union(
-      v.literal("pdf"),
-      v.literal("text"),
-      v.literal("markdown")
-    ),
+    type: v.union(v.literal("pdf"), v.literal("text"), v.literal("markdown")),
     tags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
-    // 1. Authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
-    // 2. Validation
+
+    // Validation
     if (args.title.length === 0) {
       throw new Error("Title cannot be empty");
     }
     if (args.content.length > 1_000_000) {
       throw new Error("Content too large (max 1MB)");
     }
-    
-    // 3. Generate content hash for duplicate detection
+
+    // Duplicate detection
     const contentHash = generateSimpleHash(args.title + args.content);
-    
-    // 4. Check for duplicates using FILTER (works with optional contentHash)
+
     const existingDuplicate = await ctx.db
       .query("documents")
-      .withIndex("by_user", q => q.eq("userId", identity.subject))
-      .filter(q => 
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .filter((q) =>
         q.or(
-          // Check by hash (for new documents that have it)
           q.eq(q.field("contentHash"), contentHash),
-          // Check by title + content (for old documents without hash)
           q.and(
             q.eq(q.field("title"), args.title),
             q.eq(q.field("content"), args.content)
@@ -96,190 +174,90 @@ export const create = mutation({
         )
       )
       .first();
-    
+
     if (existingDuplicate) {
-      throw new Error(`⚓ This cargo is already aboard! A document with identical content exists: "${existingDuplicate.title}"`);
+      throw new Error(
+        `⚓ This cargo is already aboard! A document with identical content exists: "${existingDuplicate.title}"`
+      );
     }
-    
-    // 5. Data transformation
+
+    // Data transformation
     const contentPlain = stripHtml(args.content);
     const contentPreview = contentPlain.slice(0, 200);
-    
-    // 6. Insert document
+
+    // Insert — only include optional fields when they have values
     const documentId = await ctx.db.insert("documents", {
-      // User & Organization
       userId: identity.subject,
       vertical: args.vertical,
-      
-      // Content
       title: args.title,
       content: args.content,
       contentPlain,
       contentPreview,
       contentHash,
-      
-      // Metadata
       type: args.type,
       source: {
         platform: "manual",
         importedAt: Date.now(),
       },
-      
-      // Search & Tags
       tags: args.tags ?? [],
-      
-      // Status
       status: "ready",
-      
-      // Timestamps
       createdAt: Date.now(),
-      
-      // Privacy
       isPublic: false,
     });
-    
+
     return documentId;
   },
 });
 
-/**
- * COMPASS Search - Full-text search across user's documents
- * 
- * Uses Convex search index for fast, relevant results.
- * Filters by userId for security.
- * Returns top 20 results ordered by relevance.
- */
-export const search = query({
-  args: { 
-    query: v.string(),
-    type: v.optional(v.union(
-      v.literal("pdf"), 
-      v.literal("text"), 
-      v.literal("markdown")
-    )),
-  },
-  handler: async (ctx, args) => {
-    // 1. ALWAYS check authentication first
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-    
-    // 2. Validate query (empty queries return no results)
-    const trimmedQuery = args.query.trim();
-    if (trimmedQuery.length === 0) {
-      return [];
-    }
-    
-    // 3. Build search query with user filter
-    let searchQuery = ctx.db
-      .query("documents")
-      .withSearchIndex("search_content", q => 
-        q.search("contentPlain", trimmedQuery)
-         .eq("userId", identity.subject)
-      );
-    
-    // 4. Optional type filter
-    if (args.type) {
-      // Note: Search index filters are limited
-      // We filter results in-memory for type
-      const results = await searchQuery.take(100); // Get more for filtering
-      return results
-        .filter(doc => doc.type === args.type)
-        .slice(0, 20);
-    }
-    
-    // 5. Execute search and return top 20 results
-    return await searchQuery.take(20);
-  },
-});
-
-/**
- * Get document by ID for viewing
- * Used when clicking search results
- */
-export const getById = query({
-  args: { id: v.id("documents") },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    
-    const document = await ctx.db.get(args.id);
-    
-    // Verify ownership
-    if (!document || document.userId !== identity.subject) {
-      return null;
-    }
-    
-    return document;
-  },
-});
-
 // ===================================================================
-// DAY 11: FILE UPLOAD MUTATIONS
+// MUTATIONS — File Upload (PORT)
 // ===================================================================
 
 /**
- * GENERATE UPLOAD URL - Day 11
- * Returns a signed URL for client to upload files directly to Convex storage
- * 
- * Client Flow:
- * 1. Call this function → Get signed URL
- * 2. POST file to signed URL → Get storageId
- * 3. Call createFromFile() with storageId → Document created
- * 
- * Security: User must be authenticated
- * URL expires in 5 minutes
+ * GENERATE UPLOAD URL
+ * Returns a signed URL for client to upload files directly to Convex storage.
+ *
+ * Client flow:
+ *   1. Call generateUploadUrl → signed URL
+ *   2. POST file to signed URL → storageId
+ *   3. Call createFromFile with storageId → document created
  */
 export const generateUploadUrl = mutation({
   handler: async (ctx) => {
-    // Verify authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("🚫 Not authenticated - please sign in to bring knowledge to PORT");
+      throw new Error(
+        "🚫 Not authenticated - please sign in to bring knowledge to PORT"
+      );
     }
 
-    // Generate and return upload URL
     return await ctx.storage.generateUploadUrl();
   },
 });
 
 /**
- * CREATE FROM FILE - Day 11
- * Creates document record after file is uploaded to storage
- * Schedules background job to extract text content
- * 
- * Args:
- * - fileId: Storage ID from file upload
- * - title: Document title (usually filename)
- * - type: "pdf" | "text" | "markdown"
- * 
- * Returns: Document ID
- * 
- * Flow:
- * 1. Create document with status: "processing"
- * 2. Schedule background job to extract text
- * 3. UI shows "processing" badge in real-time
- * 4. Background job updates status to "ready" when done
+ * CREATE FROM FILE
+ * Creates a document record after file upload, then schedules background
+ * text extraction. The UI shows a "processing" badge in real-time.
+ *
+ * ⚠️  Optional fields are OMITTED (not set to undefined) to satisfy
+ *     exactOptionalPropertyTypes. If your schema requires additional
+ *     fields, add them here with actual values.
  */
 export const createFromFile = mutation({
   args: {
     fileId: v.id("_storage"),
     title: v.string(),
-    type: v.union(
-      v.literal("pdf"),
-      v.literal("text"),
-      v.literal("markdown")
-    ),
+    type: v.union(v.literal("pdf"), v.literal("text"), v.literal("markdown")),
   },
   handler: async (ctx, args) => {
-    // 1. Verify authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("🚫 Not authenticated - please sign in to bring knowledge to PORT");
+      throw new Error(
+        "🚫 Not authenticated - please sign in to bring knowledge to PORT"
+      );
     }
 
-    // 2. Validate title
     if (args.title.length === 0) {
       throw new Error("⚠️ Document title cannot be empty");
     }
@@ -287,104 +265,66 @@ export const createFromFile = mutation({
       throw new Error("⚠️ Document title too long (max 500 characters)");
     }
 
-    // 3. Set default vertical (can be enhanced to detect from user profile)
-    const userVertical = "musician"; // Default - will enhance in future
-
-    // 4. Set MIME type based on file type
-    const mimeTypeMap = {
+    const mimeTypeMap: Record<string, string> = {
       pdf: "application/pdf",
       text: "text/plain",
       markdown: "text/markdown",
     };
 
-    // 5. Create document with "processing" status
     const now = Date.now();
-    
+
+    // Insert with "processing" status.
+    // Content fields are empty — processFile will fill them.
+    // Optional fields (contentHash, chaosMetadata, autoTags, errorMessage,
+    // updatedAt, processedAt, organizationId) are OMITTED, not set to undefined.
     const documentId = await ctx.db.insert("documents", {
-      // User & Organization
       userId: identity.subject,
-      organizationId: undefined,
-      vertical: userVertical,
-      
-      // Content (empty initially - will be filled by processFile)
+      vertical: "musician",
       title: args.title,
       content: "",
       contentPlain: "",
       contentPreview: "",
-      
-      // Duplicate Detection (will be generated after text extraction)
-      contentHash: undefined,
-      
-      // Type
       type: args.type,
-      
-      // Source - Track upload metadata
       source: {
-        platform: "file_upload", // 🚢 PORT upload!
-        url: undefined,
+        platform: "file_upload",
         importedAt: now,
         importedBy: identity.subject,
       },
-      
-      // Chaos Metadata (not used yet - Days 16-20)
-      chaosMetadata: undefined,
-      
-      // Tags
       tags: [],
-      autoTags: undefined,
-      
-      // Status - Start with "processing"
-      status: "processing", // ⚙️ Will become "ready" after text extraction
-      errorMessage: undefined,
-      
-      // File Storage
+      status: "processing",
       fileId: args.fileId,
-      fileSize: 0, // Will be updated by processFile
-      mimeType: mimeTypeMap[args.type],
-      
-      // Timestamps
+      fileSize: 0,
+      mimeType: mimeTypeMap[args.type] ?? "application/octet-stream",
       createdAt: now,
-      updatedAt: undefined,
-      processedAt: undefined,
-      
-      // Privacy
       isPublic: false,
     });
 
-    // 6. Schedule background processing job
-    // Runs asynchronously - UI doesn't block
-    await ctx.scheduler.runAfter(
-      0, // Run immediately
-      internal.documents.processFile,
-      { documentId }
-    );
+    // Schedule background text extraction (runs immediately)
+    await ctx.scheduler.runAfter(0, internal.documents.processFile, {
+      documentId,
+    });
 
-    // 7. Return document ID for client
     return documentId;
   },
 });
 
+// ===================================================================
+// INTERNAL — Background Processing
+// ===================================================================
+
 /**
- * PROCESS FILE - Day 11 (Background Job)
- * Internal action that extracts text from uploaded files
- * 
- * TEMPORARILY: PDF parsing disabled due to module resolution issues
- * TEXT FILES WORK PERFECTLY!
- * 
- * Flow:
- * 1. Download file from storage
- * 2. Extract text (plain text works, PDF placeholder for now)
- * 3. Generate content hash for duplicate detection
- * 4. Update document with extracted content
- * 5. Set status to "ready" or "error"
+ * PROCESS FILE (Background Job)
+ * Extracts text from uploaded files, generates content hash,
+ * and updates the document to "ready" status.
+ *
+ * PDF parsing is temporarily disabled — text/markdown work fully.
  */
 export const processFile = internalAction({
-  args: { 
-    documentId: v.id("documents") 
+  args: {
+    documentId: v.id("documents"),
   },
   handler: async (ctx, args) => {
     try {
-      // 1. Get document record
       const doc = await ctx.runQuery(internal.documents.getByIdInternal, {
         id: args.documentId,
       });
@@ -392,28 +332,26 @@ export const processFile = internalAction({
       if (!doc) {
         throw new Error("Document not found");
       }
-
       if (!doc.fileId) {
         throw new Error("Document has no file attached");
       }
 
-      // 2. Download file from Convex storage
+      // Download from Convex storage
       const file = await ctx.storage.get(doc.fileId);
       if (!file) {
         throw new Error("File not found in storage");
       }
 
-      // 3. Extract text based on file type
+      // Extract text based on file type
       let extractedText = "";
       let fileSize = 0;
 
       if (doc.type === "pdf") {
-        // === PDF TEXT EXTRACTION - TEMPORARILY DISABLED ===
+        // PDF text extraction — placeholder until pdf-parse is resolved
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
         fileSize = buffer.length;
-        
-        // Placeholder until pdf-parse module resolution is fixed
+
         extractedText = `📄 PDF Document Received
 
 🚢 Your PDF has been safely docked at PORT!
@@ -427,73 +365,66 @@ For now, you can view and manage this PDF in your knowledge base.
 
 📝 Text files (.txt, .md) are fully supported with instant text extraction.`;
 
-        console.log(`📄 PDF uploaded: ${doc.title} (${(fileSize / 1024).toFixed(2)} KB)`);
-        
+        console.log(
+          `📄 PDF uploaded: ${doc.title} (${(fileSize / 1024).toFixed(2)} KB)`
+        );
       } else {
-        // === PLAIN TEXT EXTRACTION - WORKS PERFECTLY! ===
+        // Plain text / markdown — works fully
         try {
           extractedText = await file.text();
           fileSize = extractedText.length;
-          
-          console.log(`✅ Text file processed: ${extractedText.length} characters`);
+          console.log(
+            `✅ Text file processed: ${extractedText.length} characters`
+          );
         } catch (textError) {
           console.error("❌ Text extraction error:", textError);
           throw new Error(`Text file reading failed: ${textError}`);
         }
       }
 
-      // 4. Validate extracted content
       if (extractedText.length === 0) {
         throw new Error("No text could be extracted from the file");
       }
 
-      // 5. Create content preview (first 200 chars)
       const contentPreview = extractedText.trim().slice(0, 200);
-
-      // 6. Strip HTML/markdown for plain search
       const contentPlain = extractedText
-        .replace(/<[^>]*>/g, "") // Remove HTML tags
-        .replace(/[#*_~`]/g, "") // Remove markdown symbols
+        .replace(/<[^>]*>/g, "")
+        .replace(/[#*_~`]/g, "")
         .trim();
-
-      // 7. Generate content hash for duplicate detection
       const contentHash = generateSimpleHash(doc.title + extractedText);
 
-      // 8. Update document with extracted content
+      // Update document with extracted content
       await ctx.runMutation(internal.documents.updateAfterProcessing, {
         id: args.documentId,
         content: extractedText,
-        contentPlain: contentPlain,
-        contentPreview: contentPreview,
-        contentHash: contentHash,
-        fileSize: fileSize,
+        contentPlain,
+        contentPreview,
+        contentHash,
+        fileSize,
         status: "ready",
       });
 
-      console.log(`✅ Document ${args.documentId} processed successfully - smooth sailing! 🚢`);
-
+      console.log(
+        `✅ Document ${args.documentId} processed successfully — smooth sailing! 🚢`
+      );
     } catch (error) {
-      // === ERROR HANDLING ===
       console.error("❌ Stormy seas! File processing failed:", error);
 
-      // Mark document as error state
       await ctx.runMutation(internal.documents.updateStatus, {
         id: args.documentId,
         status: "error",
-        errorMessage: error instanceof Error 
-          ? error.message 
-          : "Unknown processing error - navigate to calmer waters and try again",
+        errorMessage:
+          error instanceof Error
+            ? error.message
+            : "Unknown processing error — navigate to calmer waters and try again",
       });
-
-      console.log(`❌ Document ${args.documentId} processing failed`);
     }
   },
 });
 
 /**
- * UPDATE AFTER PROCESSING - Day 11 (Internal)
- * Called by processFile after successful text extraction
- * Updates all content fields and marks document as ready
+ * UPDATE AFTER PROCESSING (Internal)
+ * Called by processFile after successful text extraction.
  */
 export const updateAfterProcessing = internalMutation({
   args: {
@@ -507,7 +438,7 @@ export const updateAfterProcessing = internalMutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    
+
     await ctx.db.patch(args.id, {
       content: args.content,
       contentPlain: args.contentPlain,
@@ -522,9 +453,8 @@ export const updateAfterProcessing = internalMutation({
 });
 
 /**
- * UPDATE STATUS - Day 11 (Internal)
- * Called by processFile when processing fails
- * Marks document as error state with message
+ * UPDATE STATUS (Internal)
+ * Called by processFile when processing fails.
  */
 export const updateStatus = internalMutation({
   args: {
@@ -538,23 +468,24 @@ export const updateStatus = internalMutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    
+
     await ctx.db.patch(args.id, {
       status: args.status,
-      errorMessage: args.errorMessage,
       updatedAt: now,
+      ...(args.errorMessage !== undefined && {
+        errorMessage: args.errorMessage,
+      }),
     });
   },
 });
 
 /**
- * GET BY ID (Internal) - Day 11
- * Used by processFile action to fetch document
- * Internal only - not exposed to client
+ * GET BY ID — Internal (no auth check).
+ * Used by processFile action to fetch document server-side.
  */
 export const getByIdInternal = internalQuery({
-  args: { 
-    id: v.id("documents") 
+  args: {
+    id: v.id("documents"),
   },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.id);
@@ -562,53 +493,24 @@ export const getByIdInternal = internalQuery({
 });
 
 // ===================================================================
-// HELPER FUNCTIONS
+// HELPERS
 // ===================================================================
 
 /**
- * Generate simple hash for duplicate detection
- * Uses basic string hashing (not cryptographic)
+ * Simple hash for duplicate detection (DJB2 variant).
+ * Not cryptographic — just for fast content fingerprinting.
  */
 function generateSimpleHash(content: string): string {
   let hash = 0;
   for (let i = 0; i < content.length; i++) {
     const char = content.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32-bit integer
   }
   return Math.abs(hash).toString(16);
 }
 
-/**
- * Strip HTML tags from content
- * Used for creating plain text version for search
- */
+/** Strip HTML tags for creating plain text search field. */
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '').trim();
+  return html.replace(/<[^>]*>/g, "").trim();
 }
-
-
-// ===================================================================
-// 🎉 DAY 11 BACKEND: 95% COMPLETE!
-// ===================================================================
-//
-// ✅ File upload URL generation
-// ✅ Document creation from files
-// ✅ Background text extraction
-// ✅ PLAIN TEXT FILES: FULLY WORKING!
-// ⏸️ PDF parsing: Temporarily disabled (module issue)
-// ✅ Content hash generation
-// ✅ Duplicate detection
-// ✅ Real-time status updates
-// ✅ Error handling
-// ✅ VELA nautical branding
-//
-// TEXT FILES WORK PERFECTLY - Ready to test upload flow!
-// PDF parsing can be fixed later without blocking progress.
-//
-// NEXT: Build the frontend (Steps 4-6)
-// - Upload component with PORT branding
-// - Upload page
-// - Status badges on document list
-//
-// ===================================================================
