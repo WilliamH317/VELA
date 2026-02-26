@@ -43,8 +43,8 @@ export default function HomePage() {
               Navigate Your Knowledge
             </h1>
             <p className="text-xl text-muted-foreground">
-              Stop searching, start creating. VELA uses chaos theory to organize 
-              your scattered knowledge into instant answers.
+              Stop searching through scattered documents. VELA uses chaos theory
+              to turn your client briefs, SOWs, and meeting notes into instant answers.
             </p>
             <div className="flex justify-center gap-4">
               <Link href="/sign-up">
@@ -69,7 +69,7 @@ export default function HomePage() {
         <section className="border-t border-[#1B3D5C]/10 bg-gray-50 dark:bg-gray-900 py-24">
           <div className="container mx-auto px-4">
             <h2 className="text-center text-3xl font-bold text-[#1B3D5C] dark:text-white mb-12">
-              Built for Teams
+              Built for Teams Who Can&#39;t Afford to Lose Knowledge
             </h2>
             <div className="grid gap-8 md:grid-cols-3 max-w-5xl mx-auto">
               <div className="text-center">
@@ -80,7 +80,7 @@ export default function HomePage() {
                   Intelligent Navigation
                 </h3>
                 <p className="text-muted-foreground">
-                  Chaos theory finds patterns traditional folders miss
+                  Client projects self-organize — no folders or tags needed
                 </p>
               </div>
               <div className="text-center">
@@ -91,7 +91,7 @@ export default function HomePage() {
                   Instant Answers
                 </h3>
                 <p className="text-muted-foreground">
-                  AI-powered search across all your documents
+                  Ask questions, get cited answers from your client docs
                 </p>
               </div>
               <div className="text-center">
@@ -102,7 +102,7 @@ export default function HomePage() {
                   Time Saved
                 </h3>
                 <p className="text-muted-foreground">
-                  Get your hours back—no more endless searching
+                  Stop wasting billable hours searching across Drive, Slack, and email
                 </p>
               </div>
             </div>

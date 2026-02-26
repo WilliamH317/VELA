@@ -252,7 +252,7 @@ export function LighthouseSearch() {
             <Textarea
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              placeholder="What does your LIGHTHOUSE seek? (e.g., 'How do I mix vocals?' or 'What equipment do I need?')"
+              placeholder="What does your LIGHTHOUSE seek? (e.g., 'What did we promise Acme in the Q4 SOW?' or 'Summarize the client onboarding process')"
               className="min-h-[120px] resize-none border-[#1B3D5C]/20 focus:ring-[#00BCD4] focus:border-[#00BCD4]"
               disabled={isLoading}
               maxLength={1000}
