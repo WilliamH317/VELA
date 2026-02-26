@@ -6,11 +6,11 @@ Deep context for AI assistants working on the VELA codebase. This is the compani
 
 ## Product Domain
 
-VELA is a knowledge management platform for knowledge workers (beachhead: musicians). Users upload documents (PDF, text, markdown), search across them, and ask AI-powered questions that return cited answers from their knowledge base. The platform's differentiator is LAMINAR — a chaos theory–powered algorithm that makes documents self-organize into clusters (ARCHIPELAGOS), tracks access patterns (CURRENTS), and builds a knowledge graph connecting related content.
+VELA is a knowledge management platform for knowledge workers (beachhead: freelance agencies — 5–25 person service firms). Users upload documents (PDF, text, markdown), search across them, and ask AI-powered questions that return cited answers from their knowledge base. The platform's differentiator is LAMINAR — a chaos theory–powered algorithm that makes documents self-organize into clusters (ARCHIPELAGOS), tracks access patterns (CURRENTS), and builds a knowledge graph connecting related content.
 
 **Mission**: Instantly connect knowledge workers with answers across scattered documents.
 **Positioning**: "ChatGPT for company knowledge" / "Stop searching, start navigating"
-**Expansion path**: Musicians → Customer Support → Sales → Medical → Legal → 11+ verticals
+**Expansion path**: Freelance Agencies (M0-6) → Customer Support (M3-9) → Sales (M9-15) → Medical/Legal (M15-36)
 
 **90% code reuse architecture**: Core platform is shared across all verticals. Only onboarding language, example templates, industry-specific search filters, and integration connectors are customized per vertical (~10%).
 
@@ -238,22 +238,55 @@ Day 18 (Knowledge Graph)
 2. If below minimum threshold, generate synthetic data via `seedData.ts`
 3. Minimum thresholds: accessEvents ≥50 events across ≥10 docs, cooccurrences ≥5 non-zero pairs, documents ≥5
 
-## Pricing Model
+## §1.3 Pricing Strategy
 
 | Tier | Price | Limits | Target |
 |---|---|---|---|
-| Free | $0 | 10 documents, 20 queries/month | Trial users |
-| Starter | $10/month | 100 documents, unlimited queries | Individual musicians |
-| Pro | $25/month | Unlimited docs, LAMINAR clustering, priority AI | Power users, small teams |
+| Free | $0/month | 10 documents, 20 queries/month | Trial users |
+| Individual | $15/month | Unlimited documents, full LAMINAR | Solo consultants |
+| Team | $25/user/month (min 3 users) | Team workspace, shared knowledge base, admin controls | Agency teams (5–25 people) |
 
-Revenue target: $10K MRR by month 6.
+Revenue target: $1,000–1,250 MRR at Month 3 (8–10 agency teams), scaling to $10K MRR by month 6.
+
+## Strategic Decisions Archive
+
+### §1.1 Beachhead Market: Freelance Agencies
+
+**Date:** February 2026 (pivoted from original musician beachhead — messaging-only change, zero code impact)
+**Target:** Freelance agencies — 5–25 person service firms (marketing agencies, design studios, IT consultancies, accounting firms, law practices)
+
+**Why agencies:**
+1. Individual decision makers — agency founders approve $25–50/month on personal card, no procurement
+2. Business budget spending — tool cost is trivial against $150–500/hr billing rates
+3. Measurable ROI — billable hours recovered from knowledge searching ($300–1,000 saved per week)
+4. Current MVP fit — agencies upload client docs (PORT), search them (COMPASS), ask AI questions (LIGHTHOUSE). Zero new integrations needed.
+5. Expansion leverage — individual → team plan → client enterprise accounts
+6. LAMINAR value — client projects self-organize by engagement, industry, and deliverable type
+
+**Personas:**
+
+| Persona | Role | Pain Point | Example Query |
+|---|---|---|---|
+| Agency Founder/MD | Decision Maker | Runs 5–25 person shop, has budget authority, needs instant answers across all client work | "What did we promise Acme in the Q4 SOW?" |
+| Operations/Project Manager | Champion | Manages 8–20 concurrent projects, fields "where is...?" questions all day | "Find the approved budget for the Meridian redesign" |
+| Senior Strategist/Account Lead | Power User | Billing $150–300/hr, loses 6+ hours/week searching for client docs | "What competitive research did we do for FinCo last quarter?" |
+
+**Distribution:**
+- **Primary:** LinkedIn outreach to agency founders (3-touch sequence)
+- **Secondary:** Agency communities (r/agency, Agency Life Slack, LinkedIn groups)
+- **Supporting:** Product Hunt, content marketing (2–3 LinkedIn posts/week)
+
+**Positioning:** "ChatGPT for company knowledge" / "Stop searching, start navigating"
+**Expansion path:** Freelance Agencies (M0-6) → Customer Support (M3-9) → Sales (M9-15) → Medical/Legal (M15-36)
+
+**Reversibility:** HIGH — this is a messaging pivot. If agency validation fails within 90 days, the same product can target customer support teams, content creators, or any other knowledge-intensive segment.
 
 ## Known Limitations
 
 - **PDF text extraction**: Currently a placeholder due to module resolution issue with `pdf-parse` in Convex runtime. Text/markdown files work fully. PDF upload creates the document record but text extraction is partial.
 - **No pagination**: Document list queries return all documents. Needs pagination for users with 100+ docs.
 - **No test framework**: No Jest, Vitest, or other test runner configured. Validation is manual integration testing.
-- **Vertical field**: Defaults to "musician" for all uploaded documents (beachhead market assumption).
+- **Vertical field**: Defaults to "agency" for all uploaded documents (beachhead market assumption).
 - **Schema drift in docs**: Some project knowledge files contain outdated schema examples (e.g., `organizationId` field, `clerkUserId` field name). The **actual schema** is always in `convex/schema.ts` — reference that file directly, never documentation examples.
 - **LAMINAR cold-start**: With few documents (<10) and no usage history, behavioral/temporal signals are near-zero. System is designed content-first (0.60 weight) with signals that grow as usage accumulates.
 - **O(n²) graph scaling**: Knowledge graph edge computation is O(n²) for document pairs. Guard at 200 documents; above that, partition by cluster.

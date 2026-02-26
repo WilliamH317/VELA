@@ -4,7 +4,7 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 ## Project Overview
 
-VELA is an AI-powered knowledge management platform — "ChatGPT for company knowledge." Built as a 30-day MVP sprint, currently on **Day 18 of 30 (60% complete)**. VELA helps knowledge workers find answers across scattered documents using AI, with chaos theory–powered self-organizing intelligence (the LAMINAR algorithm).
+VELA is an AI-powered knowledge management platform — "ChatGPT for company knowledge." Built as a 30-day MVP sprint, currently on **Day 18 of 30 (60% complete)**. VELA helps knowledge workers find answers across scattered documents using AI, with chaos theory–powered self-organizing intelligence (the LAMINAR algorithm). **Beachhead market: freelance agencies** (5–25 person service firms — marketing agencies, design studios, IT consultancies, accounting firms, law practices) with business budgets and measurable ROI from billable hours recovered.
 
 **Nautical naming convention throughout — use these terms in all user-facing copy:**
 
@@ -407,6 +407,10 @@ ALWAYS use wave/pulse animations. NEVER use circular spinners (`animate-spin`).
 
 **USE instead:** "navigate", "discover", "illuminate", "explore", "smooth sailing", "chart your course", "find answers in seconds"
 
+### Target User Context
+
+Target user is agency teams, not musicians. User-facing examples should reference client briefs, SOWs, meeting notes, project plans — never gear notes, venues, or setlists.
+
 ---
 
 ## Anti-Patterns (Do NOT)
@@ -530,3 +534,14 @@ await ctx.runMutation(internal.laminar.cooccurrence.logAccess, {
 4. Search for `animate-spin` → spinner violation (use wave animation)
 5. Verify every Convex function starts with auth check
 6. Verify every action referencing `internal.*` has explicit return type
+
+---
+
+## Beachhead Pivot (February 2026)
+
+- **Market:** Freelance Agencies (5–25 person service firms)
+- **Previous market** (Musicians) preserved in Strategic Decisions Archive only
+- **Pricing:** Free ($0) / Individual ($15/mo) / Team ($25/user/mo)
+- **User-facing copy:** agency examples (client briefs, SOWs, meeting notes)
+- **DO NOT** reference musicians in any new user-facing content
+- **Brand story preserved:** "Built by a musician who understood knowledge chaos"

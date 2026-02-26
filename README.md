@@ -334,10 +334,10 @@ Phase 6: LAUNCH (Days 26-30)                                    🔒
 | Tier | Price | Documents | Queries | LAMINAR |
 |------|-------|-----------|---------|---------|
 | **Free** | $0 | 10 | 20/month | — |
-| **Starter** | $10/mo | 100 | Unlimited | — |
-| **Pro** | $25/mo | Unlimited | Unlimited | ✅ Full access |
+| **Individual** | $15/mo | 100 | Unlimited | — |
+| **Team** | $25/user/mo | Unlimited | Unlimited | ✅ Full access |
 
-Target: $10K MRR by month 6.
+Target: $1,000–1,250 MRR at Month 3 (8–10 agency teams), scaling to $10K MRR by month 6.
 
 ---
 
@@ -370,9 +370,9 @@ Target: $10K MRR by month 6.
 
 **Vision:** A world where no question goes unanswered because you can't find what you already know — where teams across every industry have instant access to collective wisdom through self-organizing intelligence that learns from how they work.
 
-**Beachhead Market:** Musicians — creative knowledge workers with non-linear workflows that demonstrate chaos theory's value.
+**Beachhead Market:** Freelance Agencies (5–25 person service firms: marketing agencies, design studios, IT consultancies, accounting firms, law practices) — teams with business budgets, measurable ROI from billable hours recovered, and individual decision makers who can adopt without procurement.
 
-**Expansion Path:** Customer Support → Sales → Medical → Legal → 11+ additional verticals. 90% code reuse architecture — only onboarding language, templates, and integration connectors are customized per vertical.
+**Expansion Path:** Agencies → Customer Support → Sales → Medical → Legal → 11+ additional verticals. 90% code reuse architecture — only onboarding language, templates, and integration connectors are customized per vertical.
 
 **Cross-Vertical Intelligence:** Each new vertical makes LAMINAR smarter for all verticals. Pattern transfer across domains creates a compounding data flywheel.
 

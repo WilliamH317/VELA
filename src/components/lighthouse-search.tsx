@@ -174,9 +174,9 @@ export function LighthouseSearch() {
   // Example questions
   // ========================================
   const exampleQuestions = [
-    "What are the best practices for mixing vocals?",
-    "How do I reduce background noise in recordings?",
-    "What microphone should I use for podcasting?",
+    "What did the client say about deliverables in the last brief?",
+    "Summarize our SOW terms for the Acme project",
+    "What action items came out of last week's team meeting?",
   ];
 
   const handleExampleQuestion = (exampleQ: string) => {

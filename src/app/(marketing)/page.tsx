@@ -69,7 +69,7 @@ export default function HomePage() {
         <section className="border-t border-[#1B3D5C]/10 bg-gray-50 dark:bg-gray-900 py-24">
           <div className="container mx-auto px-4">
             <h2 className="text-center text-3xl font-bold text-[#1B3D5C] dark:text-white mb-12">
-              Built for Knowledge Workers
+              Built for Teams
             </h2>
             <div className="grid gap-8 md:grid-cols-3 max-w-5xl mx-auto">
               <div className="text-center">

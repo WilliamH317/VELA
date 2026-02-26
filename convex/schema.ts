@@ -47,7 +47,7 @@ export default defineSchema({
     // Ownership
     userId: v.string(),
     organizationId: v.optional(v.string()), // Future: team workspaces
-    vertical: v.string(), // "musician", "customer_support", etc.
+    vertical: v.string(), // "agency", "customer_support", etc.
 
     // Content
     title: v.string(),

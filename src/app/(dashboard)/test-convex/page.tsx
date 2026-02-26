@@ -27,7 +27,7 @@ export default function TestConvexPage() {
       await createDocument({
         title,
         content: `Test content for ${title}`,
-        vertical: "musician",
+        vertical: "agency",
         type: "text",
       });
       

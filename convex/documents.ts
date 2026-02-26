@@ -279,7 +279,7 @@ export const createFromFile = mutation({
     // updatedAt, processedAt, organizationId) are OMITTED, not set to undefined.
     const documentId = await ctx.db.insert("documents", {
       userId: identity.subject,
-      vertical: "musician",
+      vertical: "agency",
       title: args.title,
       content: "",
       contentPlain: "",
