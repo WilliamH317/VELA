@@ -199,7 +199,7 @@ src/
 └── middleware.ts                      # Clerk route protection
 
 convex/
-├── schema.ts                          # 14 tables, all indexes
+├── schema.ts                          # 13 tables, all indexes
 ├── documents.ts                       # PORT: upload, list, search, CRUD
 ├── ai.ts                              # LIGHTHOUSE: Claude API (two modes)
 ├── users.ts                           # User management, Clerk sync
@@ -229,7 +229,7 @@ CLAUDE.md                              # AI coding agent project context
 
 ## Database Schema
 
-14 tables across core features and LAMINAR stages:
+13 tables across core features and LAMINAR stages:
 
 | Group | Table | Purpose |
 |-------|-------|---------|
@@ -246,7 +246,6 @@ CLAUDE.md                              # AI coding agent project context
 | **LAMINAR Stage 3** | `knowledgeEdges` | Weighted edges with 4 per-signal scores |
 | | `graphRuns` | Graph analysis execution records |
 | | `documentMetrics` | Role classification + attractor scores |
-| **LAMINAR Stage 4** | `cascadeRuns` | Cascade prediction execution records *(schema ready)* |
 
 ---
 
@@ -334,10 +333,10 @@ Phase 6: LAUNCH (Days 26-30)                                    🔒
 | Tier | Price | Documents | Queries | LAMINAR |
 |------|-------|-----------|---------|---------|
 | **Free** | $0 | 10 | 20/month | — |
-| **Individual** | $15/mo | Unlimited | Unlimited | ✅ Full access |
-| **Team** | $25/user/mo (min 3) | Unlimited | Unlimited | ✅ Full access + admin controls |
+| **Individual** | $15/mo | 100 | Unlimited | ARCHIPELAGOS clustering |
+| **Team** | $25/user/mo (min 3) | Unlimited | Unlimited | ✅ Full access (all 5 stages) + admin controls |
 
-Target: $1,000–1,250 MRR at Month 3 (8–10 agency teams), scaling to $10K MRR by month 6.
+Revenue targets (per GTM Strategy): ~$1,250 MRR at Month 1-2 (3-4 paid teams), ~$4K MRR at Month 3 (after Product Hunt), scaling to $17K+ MRR by Month 6 (50 paying agency teams + 80 solo subscribers).
 
 ---
 
@@ -356,7 +355,7 @@ Target: $1,000–1,250 MRR at Month 3 (8–10 agency teams), scaling to $10K MRR
 
 ## Known Limitations
 
-- **PDF extraction**: Partially working due to `pdf-parse` module resolution in the Convex runtime. Text and Markdown files work fully.
+- **PDF extraction**: ⚠️ Status under verification — was flagged as partial due to `pdf-parse` module resolution in the Convex runtime, but may have been resolved during Phase 3. Text and Markdown files work fully.
 - **No pagination**: Document list returns all documents. Needs pagination for 100+ docs.
 - **No test framework**: Validation is manual integration testing — no Jest/Vitest configured.
 - **LAMINAR cold-start**: With < 10 documents and no usage history, behavioral/temporal signals are near-zero. System is designed content-first (0.60 weight) with signals that grow as usage accumulates.
@@ -382,6 +381,6 @@ Target: $1,000–1,250 MRR at Month 3 (8–10 agency teams), scaling to $10K MRR
 
 ---
 
-**Last Updated:** February 25, 2026 (Day 18)
+**Last Updated:** February 27, 2026 (Day 18)
 **Status:** Active Development — 60% Complete
 **Next Milestone:** Day 19 — LAMINAR Stage 4 (Butterfly Effect)

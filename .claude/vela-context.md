@@ -2,7 +2,7 @@
 
 Deep context for AI assistants working on the VELA codebase. This is the companion to `CLAUDE.md` — while CLAUDE.md covers rules, patterns, and anti-patterns, this file covers domain knowledge, product context, implementation history, and cross-stage dependencies.
 
-**Last Updated:** February 21, 2026 (Day 18 of 30-day sprint)
+**Last Updated:** February 27, 2026 (Day 18 of 30-day sprint)
 
 ## Product Domain
 
@@ -243,10 +243,10 @@ Day 18 (Knowledge Graph)
 | Tier | Price | Limits | Target |
 |---|---|---|---|
 | Free | $0/month | 10 documents, 20 queries/month | Trial users |
-| Individual | $15/month | Unlimited documents, full LAMINAR | Solo consultants |
-| Team | $25/user/month (min 3 users) | Team workspace, shared knowledge base, admin controls | Agency teams (5–25 people) |
+| Individual | $15/month | 100 documents, LAMINAR clustering (ARCHIPELAGOS) | Solo consultants |
+| Team | $25/user/month (min 3 users) | Unlimited documents, full LAMINAR (all 5 stages), team workspace, admin controls | Agency teams (5–25 people) |
 
-Revenue target: $1,000–1,250 MRR at Month 3 (8–10 agency teams), scaling to $10K MRR by month 6.
+Revenue targets (per GTM Strategy v2): ~$1,250 MRR at Month 1-2 (3-4 paid teams), ~$4K MRR at Month 3 (after Product Hunt), scaling to $17K+ MRR by Month 6 (50 paying agency teams + 80 solo subscribers).
 
 ## Strategic Decisions Archive
 
@@ -283,11 +283,10 @@ Revenue target: $1,000–1,250 MRR at Month 3 (8–10 agency teams), scaling to 
 
 ## Known Limitations
 
-- **PDF text extraction**: Currently a placeholder due to module resolution issue with `pdf-parse` in Convex runtime. Text/markdown files work fully. PDF upload creates the document record but text extraction is partial.
+- **PDF text extraction**: ⚠️ Verify current status — was flagged as partial due to `pdf-parse` module resolution in Convex runtime, but may have been resolved during Phase 3. Text/markdown files work fully. Check actual behavior before assuming either way.
 - **No pagination**: Document list queries return all documents. Needs pagination for users with 100+ docs.
 - **No test framework**: No Jest, Vitest, or other test runner configured. Validation is manual integration testing.
-- **Vertical field**: Defaults to "agency" for all uploaded documents (beachhead market assumption).
-- **Schema drift in docs**: Some project knowledge files contain outdated schema examples (e.g., `organizationId` field, `clerkUserId` field name). The **actual schema** is always in `convex/schema.ts` — reference that file directly, never documentation examples.
+- **Schema drift in docs**: Some project knowledge files contain outdated schema examples (e.g., `organizationId` field, `clerkUserId` field name, `vertical` field on documents). The **actual schema** is always in `convex/schema.ts` — reference that file directly, never documentation examples.
 - **LAMINAR cold-start**: With few documents (<10) and no usage history, behavioral/temporal signals are near-zero. System is designed content-first (0.60 weight) with signals that grow as usage accumulates.
 - **O(n²) graph scaling**: Knowledge graph edge computation is O(n²) for document pairs. Guard at 200 documents; above that, partition by cluster.
 

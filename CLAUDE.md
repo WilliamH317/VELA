@@ -72,7 +72,7 @@ Protected routes are enforced in `src/middleware.ts` via Clerk's `createRouteMat
 
 ### Convex Backend (convex/)
 
-**14 tables total** after Day 18 schema additions. Schema is in `convex/schema.ts`.
+**13 tables total** after Day 18 schema additions. Schema is in `convex/schema.ts`.
 
 **Core tables (Days 1-15):**
 - `users` — Clerk ID mapping, profile data
@@ -177,7 +177,7 @@ src/
 ├── middleware.ts                                    ✅
 convex/
 ├── _generated/                     ⚠️ Auto-generated — NEVER edit
-├── schema.ts                       ✅ All 14 tables
+├── schema.ts                       ✅ All 13 tables
 ├── documents.ts                    ✅
 ├── users.ts                        ✅
 ├── ai.ts                           ✅
@@ -215,7 +215,7 @@ Required in `.env.local`:
 
 ## Key Implementation Details
 
-- Documents support types: pdf, text, markdown, slack, google-doc, notion, confluence
+- Production document types: `pdf`, `text`, `markdown` (future post-MVP: `slack`, `drive`, `notion` — see MVP Spec §NOT in MVP)
 - PDF text extraction happens server-side in Convex actions using `pdf-parse`
 - Duplicate detection uses SHA-256 content hashing (`by_user_and_hash` index)
 - Full-text search uses Convex's `searchIndex` on `contentPlain` field
