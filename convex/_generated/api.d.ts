@@ -14,6 +14,7 @@ import type * as laminar_access from "../laminar/access.js";
 import type * as laminar_confidence from "../laminar/confidence.js";
 import type * as laminar_cooccurrence from "../laminar/cooccurrence.js";
 import type * as laminar_engine from "../laminar/engine.js";
+import type * as laminar_graph from "../laminar/graph.js";
 import type * as laminar_kmeans from "../laminar/kmeans.js";
 import type * as laminar_queries from "../laminar/queries.js";
 import type * as laminar_temporal from "../laminar/temporal.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   "laminar/confidence": typeof laminar_confidence;
   "laminar/cooccurrence": typeof laminar_cooccurrence;
   "laminar/engine": typeof laminar_engine;
+  "laminar/graph": typeof laminar_graph;
   "laminar/kmeans": typeof laminar_kmeans;
   "laminar/queries": typeof laminar_queries;
   "laminar/temporal": typeof laminar_temporal;

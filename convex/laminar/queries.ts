@@ -444,3 +444,234 @@ export const getTemporalSummary = query({
     };
   },
 });
+
+// ============================================================================
+// 9. getDocumentConnections
+//    Knowledge graph connections for a specific document.
+//    Queries both directions (source and target) of knowledgeEdges.
+// ============================================================================
+
+export const getDocumentConnections = query({
+  args: { documentId: v.id("documents") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const userId = identity.subject;
+
+    // Verify document belongs to user
+    const doc = await ctx.db.get(args.documentId);
+    if (!doc || doc.userId !== userId) return null;
+
+    // Query edges where this doc is source
+    const asSource = await ctx.db
+      .query("knowledgeEdges")
+      .withIndex("by_source", (q) =>
+        q.eq("userId", userId).eq("sourceDocId", args.documentId),
+      )
+      .collect();
+
+    // Query edges where this doc is target
+    const asTarget = await ctx.db
+      .query("knowledgeEdges")
+      .withIndex("by_target", (q) =>
+        q.eq("userId", userId).eq("targetDocId", args.documentId),
+      )
+      .collect();
+
+    // Merge, sort by weight desc, take top 10
+    const allEdges = [...asSource, ...asTarget]
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, 10);
+
+    // Resolve connected document titles
+    const connections = await Promise.all(
+      allEdges.map(async (edge) => {
+        const connectedId =
+          String(edge.sourceDocId) === String(args.documentId)
+            ? edge.targetDocId
+            : edge.sourceDocId;
+        const connectedDoc = await ctx.db.get(connectedId);
+        const signalCount = [
+          edge.signals.contentSimilarity,
+          edge.signals.structuralLink,
+          edge.signals.coAccessStrength,
+          edge.signals.temporalProximity,
+        ].filter((s) => s > 0).length;
+
+        return {
+          documentId: connectedId,
+          title: connectedDoc?.title ?? "Unknown document",
+          weight: edge.weight,
+          signals: edge.signals,
+          signalCount,
+          isBridge: edge.isBridge,
+        };
+      }),
+    );
+
+    return connections;
+  },
+});
+
+// ============================================================================
+// 10. getBridgeDocuments
+//     Documents spanning multiple ARCHIPELAGOS (isAmbiguous in memberships).
+// ============================================================================
+
+export const getBridgeDocuments = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const userId = identity.subject;
+
+    // Find latest completed run to scope memberships
+    const latestRun = await ctx.db
+      .query("clusteringRuns")
+      .withIndex("by_user_status", (q) =>
+        q.eq("userId", userId).eq("status", "completed"),
+      )
+      .order("desc")
+      .first();
+
+    if (!latestRun) return [];
+
+    const memberships = await ctx.db
+      .query("clusterMemberships")
+      .withIndex("by_run", (q) => q.eq("runId", latestRun._id))
+      .collect();
+
+    // Collect unique ambiguous document IDs
+    const ambiguousDocIds = [
+      ...new Set(
+        memberships
+          .filter((m) => m.isAmbiguous === true)
+          .map((m) => m.documentId),
+      ),
+    ];
+
+    const docs = await Promise.all(
+      ambiguousDocIds.slice(0, 20).map(async (id) => {
+        const doc = await ctx.db.get(id);
+        if (!doc) return null;
+        // Get this doc's cluster memberships for display
+        const docMemberships = memberships
+          .filter((m) => String(m.documentId) === String(id))
+          .sort((a, b) => b.probability - a.probability)
+          .slice(0, 3);
+        return {
+          _id: doc._id,
+          title: doc.title,
+          topMemberships: docMemberships.map((m) => ({
+            clusterId: m.clusterId,
+            probability: m.probability,
+          })),
+        };
+      }),
+    );
+
+    return docs.filter(
+      (d): d is NonNullable<typeof d> => d !== null,
+    );
+  },
+});
+
+// ============================================================================
+// 11. getAttractorStates
+//     Most-connected documents — knowledge centers in the graph.
+// ============================================================================
+
+export const getAttractorStates = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const userId = identity.subject;
+
+    const edges = await ctx.db
+      .query("knowledgeEdges")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    if (edges.length === 0) return [];
+
+    // Sum edge weights and connection counts per document
+    const weightMap = new Map<string, number>();
+    const countMap = new Map<string, number>();
+    for (const edge of edges) {
+      const src = String(edge.sourceDocId);
+      const tgt = String(edge.targetDocId);
+      weightMap.set(src, (weightMap.get(src) ?? 0) + edge.weight);
+      weightMap.set(tgt, (weightMap.get(tgt) ?? 0) + edge.weight);
+      countMap.set(src, (countMap.get(src) ?? 0) + 1);
+      countMap.set(tgt, (countMap.get(tgt) ?? 0) + 1);
+    }
+
+    // Sort by total weight desc, take top 10
+    const sorted = [...weightMap.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+
+    const maxWeight = sorted[0]?.[1] ?? 0;
+
+    const attractors = await Promise.all(
+      sorted.map(async ([docId, totalWeight]) => {
+        // docId is a string representation of Id<"documents">
+        const doc = await ctx.db.get(
+          docId as unknown as typeof edges[0]["sourceDocId"],
+        );
+        return {
+          documentId: docId,
+          title: doc?.title ?? "Unknown document",
+          totalWeight,
+          connectionCount: countMap.get(docId) ?? 0,
+          classification:
+            totalWeight > maxWeight * 0.7
+              ? ("strong" as const)
+              : totalWeight > maxWeight * 0.3
+                ? ("emerging" as const)
+                : ("peripheral" as const),
+        };
+      }),
+    );
+
+    return attractors;
+  },
+});
+
+// ============================================================================
+// 12. getGraphSummary
+//     High-level stats for the connections page header.
+// ============================================================================
+
+export const getGraphSummary = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const userId = identity.subject;
+
+    const edges = await ctx.db
+      .query("knowledgeEdges")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const uniqueDocs = new Set<string>();
+    let totalWeight = 0;
+    let bridgeCount = 0;
+    for (const edge of edges) {
+      uniqueDocs.add(String(edge.sourceDocId));
+      uniqueDocs.add(String(edge.targetDocId));
+      totalWeight += edge.weight;
+      if (edge.isBridge) bridgeCount++;
+    }
+
+    return {
+      edgeCount: edges.length,
+      documentCount: uniqueDocs.size,
+      avgWeight: edges.length > 0 ? totalWeight / edges.length : 0,
+      bridgeEdgeCount: bridgeCount,
+      lastComputed:
+        edges.length > 0
+          ? Math.max(...edges.map((e) => e.lastComputed))
+          : null,
+    };
+  },
+});

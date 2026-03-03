@@ -1,6 +1,6 @@
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
-import { Home, FileText, Upload, Search, Lightbulb, MapPin } from "lucide-react";
+import { Home, FileText, Upload, Search, Lightbulb, MapPin, GitBranch } from "lucide-react";
 
 export default function DashboardLayout({
   children,
@@ -74,6 +74,14 @@ export default function DashboardLayout({
                   <MapPin className="h-4 w-4" />
                   <span>ARCHIPELAGOS</span>
                 </Link>
+
+                <Link
+                  href="/connections"
+                  className="px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-[#1B3D5C] hover:bg-[#1B3D5C]/5 transition-colors flex items-center gap-2"
+                >
+                  <GitBranch className="h-4 w-4" />
+                  <span>CHARTS</span>
+                </Link>
               </div>
             </div>
 
@@ -115,6 +123,10 @@ export default function DashboardLayout({
             <Link href="/archipelagos" className="flex flex-col items-center gap-1 px-2 py-1 text-gray-600 hover:text-[#1B3D5C] transition-colors">
               <MapPin className="h-5 w-5" />
               <span className="text-[10px] font-medium">ISLANDS</span>
+            </Link>
+            <Link href="/connections" className="flex flex-col items-center gap-1 px-2 py-1 text-gray-600 hover:text-[#1B3D5C] transition-colors">
+              <GitBranch className="h-5 w-5" />
+              <span className="text-[10px] font-medium">CHARTS</span>
             </Link>
           </div>
         </div>
