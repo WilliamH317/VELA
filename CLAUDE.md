@@ -73,13 +73,8 @@ const runGraphAnalysis = useAction(api.laminar.graphRunner.runGraphAnalysis);
 
 ## Key Implementation Details
 
-- Production document types: `pdf`, `text`, `markdown` (future post-MVP: `slack`, `drive`, `notion` — see MVP Spec §NOT in MVP)
-- PDF text extraction happens server-side in Convex actions using `pdf-parse`
 - Duplicate detection uses SHA-256 content hashing (`by_user_and_hash` index)
-- Full-text search uses Convex's `searchIndex` on `contentPlain` field
 - AI responses are capped at `MAX_CHARS_PER_DOC = 8000` chars per document context
-- Dark mode via `next-themes` with class-based toggling
-- All schema fields use **camelCase**: `userId`, `contentPlain`, `membershipScore` — never `snake_case`
 
 ---
 
@@ -116,23 +111,6 @@ LAMINAR = **L**atent **A**ssociation **M**apping via **I**ntelligent **N**atural
 | 3 | 18 | Cross-Document Intelligence | Knowledge graph edges, bridge documents, attractor states | 🔧 In Progress |
 | 4 | 19 | Butterfly Effect | Cascade prediction across knowledge graph | 📋 Planned |
 | 5 | 20 | Fractal Wisdom | Multi-scale pattern recognition | 📋 Planned |
-
-### Stage 1: ARCHIPELAGOS (Day 16 — Shipped)
-
-- TF-IDF vectorization → K-Means clustering (K-Means++ init) → softmax confidence scoring
-- Pipeline result: 7 docs clustered in 202ms, K=2, silhouette 0.1531
-- Reusable exports from `tfidf.ts`: `buildVocabulary`, `computeTFIDF`, `cosineSimilarity`
-- Probabilistic membership: document belongs 72% to cluster A, 18% to cluster B (not binary)
-- `isAmbiguous` flag: true when top two cluster probabilities are within 15%
-
-### Stage 2: CURRENTS (Day 17 — Shipped)
-
-- Silent access event logging on all document touchpoints (view, search, ai_query)
-- Trajectory estimation: rising / stable / declining / periodic trends
-- Co-occurrence matrix: documents accessed within same session are linked
-- CURRENTS panel integrated into document detail view
-
-### Stage 3: Knowledge Graph (Day 18 — In Progress)
 
 **4-signal edge fusion architecture:**
 
@@ -381,22 +359,7 @@ await ctx.runMutation(internal.laminar.cooccurrence.logAccess, {
 
 ---
 
-## Delegation Boundaries
-
-### Claude Code SHOULD handle:
-- Pure TypeScript algorithm implementations (TF-IDF, K-Means, graph analysis)
-- Boilerplate-heavy Convex mutations/queries/actions
-- React component generation (cluster cards, graph panels, visualization pages)
-- Test scaffolding (synthetic corpus generators, validation metrics)
-
-### Claude Code should NOT handle:
-- **Schema design** — Will owns all `convex/schema.ts` changes
-- **Architecture decisions** — signal weights, thresholds, data flow between stages
-- **Brand compliance judgment** — no tool reliably catches wrong shades of blue
-- **Integration testing** — multi-tab sync, auth flow, regression checks
-- **Simple CRUD operations** — faster to code manually
-
-### Post-generation review checklist:
+## Post-Generation Review Checklist
 1. Search generated files for `blue-`, `cyan-`, `#0000FF`, `#00FFFF` → brand violation
 2. Search for "Loading...", "Search", "Upload" → should be nautical terms
 3. Search for "optimize", "workflow", "efficiency" → forbidden jargon
