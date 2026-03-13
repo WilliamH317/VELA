@@ -6,38 +6,31 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 VELA is an AI-powered knowledge management platform — "ChatGPT for company knowledge." Built as a 30-day MVP sprint, currently on **Day 18 of 30 (60% complete)**. VELA helps knowledge workers find answers across scattered documents using AI, with chaos theory–powered self-organizing intelligence (the LAMINAR algorithm). **Beachhead market: freelance agencies** (5–25 person service firms — marketing agencies, design studios, IT consultancies, accounting firms, law practices) with business budgets and measurable ROI from billable hours recovered.
 
-**Nautical naming convention throughout — use these terms in all user-facing copy:**
-
-| Feature | Nautical Name | Status |
-|---|---|---|
-| Dashboard | HELM | ✅ |
-| Document Upload | PORT | ✅ |
-| Full-Text Search | COMPASS | ✅ |
-| AI Q&A | LIGHTHOUSE | ✅ |
-| Document Clusters | ARCHIPELAGOS | ✅ Day 16 |
-| Related Documents | CURRENTS | ✅ Day 17 |
-| Knowledge Graph | CHARTS | 🔧 Day 18 |
-| Cascade Prediction | BUTTERFLY EFFECT | 📋 Day 19 |
-| Documents | CARGO | — |
-| User | CAPTAIN | — |
-| Onboarding | MAIDEN VOYAGE | — |
-| Loading State | NAVIGATING | — |
-| Empty State | STILL WATERS | — |
-| Error State | STORMY SEAS | — |
-
 ## Companion Context File
 
-This CLAUDE.md works alongside `.claude/vela-context.md` which contains session-specific notes, patterns that worked or failed, and file paths discovered during development. Update `vela-context.md` at the end of each development day with actual file paths created, patterns Claude Code got wrong (so it doesn't repeat), and Convex-specific conventions discovered.
+This file (`CLAUDE.md`) works alongside `.claude/vela-context.md`.
 
-## Tech Stack
+**What belongs where:**
 
-- **Frontend**: Next.js 16 (App Router) + React 19 + TypeScript (strict mode)
-- **Backend**: Convex (real-time BaaS with WebSocket sync)
-- **Auth**: Clerk (JWT-based, integrated with Convex)
-- **AI**: Anthropic Claude Sonnet 4 via `@anthropic-ai/sdk`
-- **Styling**: Tailwind CSS 4 + Shadcn UI (new-york style, lucide-react icons)
-- **File Processing**: pdf-parse for PDF text extraction
-- **LAMINAR Algorithm**: Pure TypeScript — NO Python, NO sklearn, NO external ML deps
+| File | Contains |
+|---|---|
+| `CLAUDE.md` | Permanent constraints · discovered anti-patterns · brand rules · algorithm formulas · non-obvious Convex patterns |
+| `vela-context.md` | Today's created file paths · this session's failures · in-progress work state · active schema divergences found today |
+
+**Rule:** Do NOT update `CLAUDE.md` during a session unless a new *permanent* pattern
+was discovered (e.g., a new Convex failure mode, a new brand violation class).
+Session-specific observations, file paths, and in-progress notes → `vela-context.md` only.
+
+Update `vela-context.md` at the end of each development day with:
+- Actual file paths created
+- Any patterns Claude Code got wrong (prevents repetition)
+- Convex-specific conventions discovered during the session
+
+## Key Constraints
+
+- **LAMINAR is pure TypeScript — NO Python, NO sklearn, NO external ML deps. No exceptions.**
+- `ANTHROPIC_API_KEY` is consumed in Convex actions (server-side), not in Next.js API routes.
+- All environment variables are in `.env.local`.
 
 ## Development Commands
 
@@ -54,48 +47,7 @@ There is no test runner configured. Convex auto-generates types into `convex/_ge
 
 ## Architecture
 
-### Provider Chain (src/app/providers.tsx)
-
-```
-ClerkProvider → ConvexProviderWithClerk → ThemeProvider → UserSetup → children
-```
-
-`UserSetup` auto-creates/updates the Convex user record on sign-in using Clerk identity data.
-
-### Route Groups (Next.js App Router)
-
-- `(auth)/` — Sign-in/sign-up pages (public)
-- `(dashboard)/` — All protected routes share a layout with nav, footer, mobile menu
-- `(marketing)/` — Public landing page
-
-Protected routes are enforced in `src/middleware.ts` via Clerk's `createRouteMatcher`.
-
 ### Convex Backend (convex/)
-
-**13 tables total** after Day 18 schema additions. Schema is in `convex/schema.ts`.
-
-**Core tables (Days 1-15):**
-- `users` — Clerk ID mapping, profile data
-- `documents` — All uploaded CARGO with content, metadata, status flow (`processing → ready → error`)
-- `queries` — AI query logging for analytics
-
-**LAMINAR Stage 1 tables (Day 16 — ARCHIPELAGOS):**
-- `clusteringRuns` — Tracks each clustering execution (status, silhouette score, timing)
-- `clusters` — The ARCHIPELAGOS themselves (name, keywords, centroid vector, coherence)
-- `clusterMemberships` — Probabilistic membership: doc → cluster with probability score + isPrimary + isAmbiguous flags
-- `clusterHistory` — Tracks cluster evolution over time (for Day 17+ temporal analysis)
-
-**LAMINAR Stage 2 tables (Day 17 — CURRENTS):**
-- `accessEvents` — Logs every document access with timestamp and action type (view, search, ai_query)
-- `temporalPatterns` — Stores trajectory estimates per document (rising/stable/declining/periodic trends)
-- `cooccurrences` — Co-occurrence matrix: document pairs accessed within the same session
-
-**LAMINAR Stage 3 tables (Day 18 — Knowledge Graph):**
-- `knowledgeEdges` — Weighted edges between documents with 4 individual signal scores + combined weight
-- `graphRuns` — Tracks each graph analysis execution
-- `documentMetrics` — Per-document role classification (bridge, knowledge_center, rising_attractor, satellite, island) + attractor scores
-
-**Core backend files:**
 
 | File | Purpose |
 |---|---|
@@ -104,114 +56,20 @@ Protected routes are enforced in `src/middleware.ts` via Clerk's `createRouteMat
 | `convex/users.ts` | User management, Clerk ID lookups |
 | `convex/queries.ts` | AI query logging for analytics |
 
-**LAMINAR backend files (convex/laminar/):**
-
-| File | Day | Exports / Purpose |
-|---|---|---|
-| `tfidf.ts` | 16 | `tokenize`, `buildVocabulary`, `computeTFIDF`, `cosineSimilarity` — pure TS, no deps |
-| `kmeans.ts` | 16 | `kMeansCluster`, `calculateSilhouette`, `suggestK` — K-Means++ init |
-| `confidence.ts` | 16 | `distancesToProbabilities`, `calculateMemberships` — softmax scoring |
-| `engine.ts` | 16 | Convex action orchestrating the full clustering pipeline |
-| `queries.ts` | 16 | Real-time queries: `listClusters`, `getClusteringStatus`, etc. |
-| `temporal.ts` | 17 | Access trajectory modeling (rising/stable/declining/periodic) |
-| `cooccurrence.ts` | 17 | Co-occurrence matrix builder from access events |
-| `temporalRunner.ts` | 17 | Orchestration action for temporal analysis pipeline |
-| `graph.ts` | 18 | `buildKnowledgeGraph`, `calculateDegreeCentrality`, `calculateAttractorScore` |
-| `bridges.ts` | 18 | `detectBridges`, `classifyDocumentRole` — dual-condition bridge detection |
-| `graphRunner.ts` | 18 | Orchestration action for knowledge graph pipeline |
-| `graphQueries.ts` | 18 | `getDocumentEdges`, `getGraphStats`, `getBridgeDocuments`, `getAttractorDocuments` |
-
 ### Frontend Data Patterns
 
 ```typescript
-// Real-time query (auto-updates via WebSocket — NEVER use fetch/polling)
-const docs = useQuery(api.documents.list);
-
 // Skip query when not authenticated
 const docs = useQuery(api.documents.list, isAuthenticated ? {} : "skip");
 
-// Mutations (transactional, no external APIs)
-const createDoc = useMutation(api.documents.create);
-
 // Actions (server-side, for AI calls or multi-step LAMINAR pipelines)
-const askQuestion = useAction(api.ai.askQuestion);
 const runClustering = useAction(api.laminar.engine.runClustering);
 const runGraphAnalysis = useAction(api.laminar.graphRunner.runGraphAnalysis);
 ```
 
 **Critical:** `useQuery` returns `undefined` while loading. ALWAYS handle this state — never assume data exists.
 
-### Path Aliases
-
-- `@/*` → `./src/*`
-- `convex/*` → `./convex/*`
-
-## File Structure
-
-```
-src/
-├── app/
-│   ├── (auth)/sign-in/[[...sign-in]]/page.tsx     ✅
-│   ├── (auth)/sign-up/[[...sign-up]]/page.tsx     ✅
-│   ├── (dashboard)/
-│   │   ├── dashboard/page.tsx                      ✅ HELM
-│   │   ├── documents/page.tsx                      ✅ PORT + list
-│   │   ├── documents/[id]/page.tsx                 ✅ Detail + CURRENTS panel
-│   │   ├── documents/new/page.tsx                  ✅ Upload
-│   │   ├── search/page.tsx                         ✅ COMPASS + LIGHTHOUSE
-│   │   ├── archipelagos/page.tsx                   ✅ LAMINAR cluster view
-│   │   └── knowledge-graph/page.tsx                🔧 CHARTS (Day 18)
-│   ├── (marketing)/page.tsx                        ✅ Landing page
-│   ├── providers.tsx                               ✅
-│   ├── layout.tsx                                  ✅
-│   └── globals.css                                 ✅
-├── components/
-│   ├── ui/                                         ✅ Shadcn components
-│   ├── user-setup.tsx                              ✅
-│   ├── document-card.tsx                           ✅
-│   ├── search-box.tsx                              ✅
-│   └── knowledge-graph-panel.tsx                   🔧 Day 18
-├── lib/
-│   ├── utils.ts                                    ✅
-│   └── constants.ts                                ✅
-├── middleware.ts                                    ✅
-convex/
-├── _generated/                     ⚠️ Auto-generated — NEVER edit
-├── schema.ts                       ✅ All 13 tables
-├── documents.ts                    ✅
-├── users.ts                        ✅
-├── ai.ts                           ✅
-├── queries.ts                      ✅
-├── auth.config.ts                  ✅
-└── laminar/
-    ├── tfidf.ts                    ✅ Day 16
-    ├── kmeans.ts                   ✅ Day 16
-    ├── confidence.ts               ✅ Day 16
-    ├── engine.ts                   ✅ Day 16
-    ├── queries.ts                  ✅ Day 16
-    ├── temporal.ts                 ✅ Day 17
-    ├── cooccurrence.ts             ✅ Day 17
-    ├── temporalRunner.ts           ✅ Day 17
-    ├── graph.ts                    🔧 Day 18
-    ├── bridges.ts                  🔧 Day 18
-    ├── graphRunner.ts              🔧 Day 18
-    └── graphQueries.ts             🔧 Day 18
-```
-
-## Environment Variables
-
-Required in `.env.local`:
-
-| Variable | Scope | Purpose |
-|---|---|---|
-| `NEXT_PUBLIC_CONVEX_URL` | Client | Convex deployment URL |
-| `CONVEX_DEPLOYMENT` | Server | Convex deployment identifier |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Client | Clerk frontend auth key |
-| `CLERK_SECRET_KEY` | Server | Clerk backend key (NEVER expose to client) |
-| `CLERK_JWT_ISSUER_DOMAIN` | Server | Clerk JWT issuer for Convex auth |
-| `ANTHROPIC_API_KEY` | Server | Claude API key (used in Convex actions) |
-| `ANTHROPIC_MODEL` | Server | Model name (default: `claude-sonnet-4-20250514`) |
-| `ANTHROPIC_MAX_TOKENS` | Server | Max response tokens (default: 2048) |
+**Path aliases:** `@/*` → `./src/*` · `convex/*` → `./convex/*`
 
 ## Key Implementation Details
 
@@ -224,6 +82,26 @@ Required in `.env.local`:
 - All schema fields use **camelCase**: `userId`, `contentPlain`, `membershipScore` — never `snake_case`
 
 ---
+
+## Phase 0 — Schema Audit Hard-Stop
+
+**This step is mandatory before writing ANY integration code on a new Day.**
+
+Deployed Convex table schemas silently diverge from documentation. Before writing
+integration code: query each target table and log actual field names. Do not trust
+field name documentation in this file or vela-context.md without verifying first.
+
+**Known Day 18 divergences (documentation field → actual deployed field):**
+- `clusterMemberships.membershipScore` → `.probability`
+- `clusters.label` → `.name`
+- `clusters.topTerms` → `.topKeywords`
+- `clusteringRuns` status: `"complete"` → `"completed"` · `"error"` → `"failed"`
+
+**Protocol:**
+1. Before writing a new LAMINAR stage: run a quick query on each target table
+2. Log the actual returned field names
+3. Update vela-context.md with any new divergences found
+4. Then write integration code against verified field names
 
 ## LAMINAR Algorithm Context
 
@@ -352,6 +230,27 @@ function myCosineSimilarity(a: number[], b: number[]) { ... }
 
 ## VELA Brand Compliance (MANDATORY)
 
+### Nautical Naming Convention
+
+Use these terms in all user-facing copy:
+
+| Feature | Nautical Name | Status |
+|---|---|---|
+| Dashboard | HELM | ✅ |
+| Document Upload | PORT | ✅ |
+| Full-Text Search | COMPASS | ✅ |
+| AI Q&A | LIGHTHOUSE | ✅ |
+| Document Clusters | ARCHIPELAGOS | ✅ Day 16 |
+| Related Documents | CURRENTS | ✅ Day 17 |
+| Knowledge Graph | CHARTS | 🔧 Day 18 |
+| Cascade Prediction | BUTTERFLY EFFECT | 📋 Day 19 |
+| Documents | CARGO | — |
+| User | CAPTAIN | — |
+| Onboarding | MAIDEN VOYAGE | — |
+| Loading State | NAVIGATING | — |
+| Empty State | STILL WATERS | — |
+| Error State | STORMY SEAS | — |
+
 ### Colors — ONLY These Hex Values
 
 | Color | Hex | Tailwind | Usage |
@@ -426,15 +325,13 @@ Target user is agency teams, not musicians. User-facing examples should referenc
    handler: async (ctx, args): Promise<{ runId: string; count: number }> => { ... }
    ```
 
-2. **Never use `any` type** without a justifying comment explaining why.
-
-3. **Never skip auth checks.** Every query, mutation, and action MUST start with:
+2. **Never skip auth checks.** Every query, mutation, and action MUST start with:
    ```typescript
    const identity = await ctx.auth.getUserIdentity();
    if (!identity) throw new Error("Not authenticated");
    ```
 
-4. **Never use `.filter()` for indexed fields.** Use `.withIndex()` — `.filter()` causes full table scans:
+3. **Never use `.filter()` for indexed fields.** Use `.withIndex()` — `.filter()` causes full table scans:
    ```typescript
    // WRONG — O(n) full scan
    ctx.db.query("documents").filter(q => q.eq(q.field("userId"), userId))
@@ -443,15 +340,9 @@ Target user is agency teams, not musicians. User-facing examples should referenc
    ctx.db.query("documents").withIndex("by_user", q => q.eq("userId", userId))
    ```
 
-5. **Never edit `convex/_generated/`** — auto-generated by `npx convex dev`.
+4. **Never exceed batch size of 25** for Convex mutation arguments. Each LAMINAR record ~200 bytes × 25 = 5KB, safely under Convex's ~8KB limit. Day 16 originally used 50 and hit the limit.
 
-6. **Never use `fetch` or `useEffect` for data** — use Convex `useQuery` for real-time subscriptions.
-
-7. **Never poll for updates** — Convex WebSocket subscriptions handle real-time automatically.
-
-8. **Never exceed batch size of 25** for Convex mutation arguments. Each LAMINAR record ~200 bytes × 25 = 5KB, safely under Convex's ~8KB limit. Day 16 originally used 50 and hit the limit.
-
-9. **Never ignore `useQuery` returning `undefined`** — this means data is loading:
+5. **Never ignore `useQuery` returning `undefined`** — this means data is loading:
    ```typescript
    const data = useQuery(api.something.list);
    if (data === undefined) return <LoadingState />;  // ALWAYS handle this
@@ -459,49 +350,27 @@ Target user is agency teams, not musicians. User-facing examples should referenc
 
 ### LAMINAR-Specific
 
-10. **Never use Python, sklearn, NetworkX, or any external ML library.** All LAMINAR is pure TypeScript within Convex.
+6. **Never reimplement TF-IDF** — import from `convex/laminar/tfidf.ts`.
 
-11. **Never reimplement TF-IDF** — import from `convex/laminar/tfidf.ts`.
+7. **Never store all-pairs edges for large doc sets** without the 0.15 minimum threshold. At 100 docs, N(N-1)/2 = 4,950 potential edges — filter to meaningful connections only.
 
-12. **Never store all-pairs edges for large doc sets** without the 0.15 minimum threshold. At 100 docs, N(N-1)/2 = 4,950 potential edges — filter to meaningful connections only.
-
-13. **Guard against O(n²) blowup** — if `documents.length > 200`, the graph builder should throw a protective error. Partition by cluster for larger sets.
+8. **Guard against O(n²) blowup** — if `documents.length > 200`, the graph builder should throw a protective error. Partition by cluster for larger sets.
 
 ### Brand
 
-14. **Never use generic blue** (`#0000FF`, Tailwind `blue-500`, etc.) instead of Navy `#1B3D5C`.
-15. **Never use generic cyan** instead of Teal `#00BCD4`.
-16. **Never create circular loading spinners** — use wave/pulse animations.
-17. **Never write "Loading..."** — use nautical equivalents.
-18. **Never use corporate jargon** ("optimize", "workflow", "efficiency") in user-facing text.
+9. **Never use generic blue** (`#0000FF`, Tailwind `blue-500`, etc.) instead of Navy `#1B3D5C`.
+10. **Never use generic cyan** instead of Teal `#00BCD4`.
+11. **Never create circular loading spinners** — use wave/pulse animations.
+12. **Never write "Loading..."** — use nautical equivalents.
+13. **Never use corporate jargon** ("optimize", "workflow", "efficiency") in user-facing text.
 
 ---
 
-## Patterns That Work
+## Critical Patterns
 
-### 1. Convex Action → Internal Mutation Pipeline
+All schema fields use **camelCase**: `userId`, `contentPlain`, `membershipScore` — never `snake_case`.
 
-All LAMINAR orchestration follows this pattern (see "LAMINAR Orchestration Pattern" above). The action fetches data and runs pure functions; internal mutations store results. This avoids timeout issues and keeps mutations transactional.
-
-### 2. Explicit Return Type Annotations
-
-After discovering TS7022 on Day 16, ALL actions and internal mutations that reference `internal.*` from the same module use explicit `Promise<ReturnType>` annotations. This is non-negotiable for any new LAMINAR file.
-
-### 3. Batch Insert at 25
-
-Convex mutations have an ~8KB argument limit. Each LAMINAR record (edge, membership, etc.) is ~200 bytes. 25 × 200 = 5KB, safely under the limit.
-
-### 4. Wave Animation Loading
-
-Every loading state uses the LAMINAR gradient pulse bar with nautical copy (see "Loading Animation Pattern" above).
-
-### 5. Schema Field Naming
-
-All fields are camelCase: `userId`, `contentPlain`, `membershipScore`, `combinedWeight`, `attractorScore`. Never snake_case.
-
-### 6. Silent Access Event Logging
-
-Day 17 introduced silent logging on all document touchpoints. When building new features that touch documents, always emit an access event:
+**Silent Access Event Logging:** When building new features that touch documents, always emit an access event:
 ```typescript
 await ctx.runMutation(internal.laminar.cooccurrence.logAccess, {
   documentId: args.id,
