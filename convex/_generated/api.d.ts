@@ -16,6 +16,8 @@ import type * as laminar_cooccurrence from "../laminar/cooccurrence.js";
 import type * as laminar_engine from "../laminar/engine.js";
 import type * as laminar_graph from "../laminar/graph.js";
 import type * as laminar_kmeans from "../laminar/kmeans.js";
+import type * as laminar_pipeline from "../laminar/pipeline.js";
+import type * as laminar_processors from "../laminar/processors.js";
 import type * as laminar_queries from "../laminar/queries.js";
 import type * as laminar_runner from "../laminar/runner.js";
 import type * as laminar_temporal from "../laminar/temporal.js";
@@ -40,6 +42,8 @@ declare const fullApi: ApiFromModules<{
   "laminar/engine": typeof laminar_engine;
   "laminar/graph": typeof laminar_graph;
   "laminar/kmeans": typeof laminar_kmeans;
+  "laminar/pipeline": typeof laminar_pipeline;
+  "laminar/processors": typeof laminar_processors;
   "laminar/queries": typeof laminar_queries;
   "laminar/runner": typeof laminar_runner;
   "laminar/temporal": typeof laminar_temporal;
