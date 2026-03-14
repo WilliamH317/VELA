@@ -2,7 +2,10 @@
 
 Deep context for AI assistants working on the VELA codebase. This is the companion to `CLAUDE.md` — while CLAUDE.md covers rules, patterns, and anti-patterns, this file covers domain knowledge, product context, implementation history, and cross-stage dependencies.
 
-**Last Updated:** February 27, 2026 (Day 18 of 30-day sprint)
+**Last Updated:** March 13, 2026 (Day 18 of 30-day sprint)
+
+CLAUDE.md refitted 2026-03-13: 547 → 379 lines. File structure tree, table
+inventories, and architecture prose removed. Phase 0 Schema Audit added.
 
 ## Product Domain
 
