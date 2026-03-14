@@ -273,3 +273,33 @@ function l2Normalize(vec: number[]): void {
     vec[i] = vec[i]! / norm;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Signal-aware TF-IDF (Phase 5 additive export)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build TF-IDF vectors from DocumentSignals instead of raw strings.
+ *
+ * Advantages over buildVocabulary + computeTFIDF:
+ * - Uses pre-tokenized, type-specific terms (not generic contentPlain)
+ * - Can incorporate structuralWeight and authorityScore as feature signals
+ * - Preserves document type context for downstream stages
+ *
+ * Current implementation: uses terms only (drop-in replacement).
+ * Future: weight term frequencies by structuralWeight + authorityScore.
+ *
+ * SC2 Principle: Polymorphism -- same function handles all document types
+ * via the DocumentSignals interface.
+ */
+export function buildTFIDFFromSignals(signals: Array<{ terms: string[] }>): {
+  vocabulary: Vocabulary;
+  vectors: TFIDFMatrix;
+} {
+  // Reconstruct raw strings from pre-extracted terms for compatibility
+  // with the existing TF-IDF pipeline
+  const documents = signals.map(s => s.terms.join(" "));
+  const vocabulary = buildVocabulary(documents);
+  const vectors = computeTFIDF(documents, vocabulary);
+  return { vocabulary, vectors };
+}
