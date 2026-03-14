@@ -13,7 +13,6 @@
 import {
   action,
   internalMutation,
-  internalQuery,
 } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { v } from "convex/values";
@@ -125,18 +124,10 @@ function extractClusterKeywords(
 }
 
 // ============================================================================
-// INTERNAL QUERY — fetch user's documents from within action
+// NOTE: Document fetching now goes through the Knowledge Domain bridge:
+//   internal.documents.getForLaminar
+// This file must NEVER query the "documents" table directly.
 // ============================================================================
-
-export const getUserDocuments = internalQuery({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("documents")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .collect();
-  },
-});
 
 // ============================================================================
 // INTERNAL MUTATIONS — all database writes the action needs
@@ -300,15 +291,15 @@ export const run = action({
     });
 
     try {
-      // ── 3. Fetch all user's documents ────────────────────────────────
-      const documents: Doc<"documents">[] = await ctx.runQuery(
-        internal.laminar.engine.getUserDocuments,
+      // ── 3. Fetch ready documents via Knowledge Domain bridge ────────
+      const allReadyDocs: Doc<"documents">[] = await ctx.runQuery(
+        internal.documents.getForLaminar,
         { userId },
       );
 
-      // ── 4. Extract contentPlain from ready documents ─────────────────
-      const readyDocs = documents.filter(
-        (d) => d.status === "ready" && d.contentPlain.length > 0,
+      // ── 4. Filter to documents with content ─────────────────────────
+      const readyDocs = allReadyDocs.filter(
+        (d) => d.contentPlain.length > 0,
       );
       const contents = readyDocs.map((d) => d.contentPlain);
       const docIds = readyDocs.map((d) => d._id);

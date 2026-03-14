@@ -329,15 +329,8 @@ function capEdges(edges: EdgeRecord[]): EdgeRecord[] {
 // INTERNAL QUERIES — Read data from within the action
 // ============================================================================
 
-export const getUserReadyDocuments = internalQuery({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("documents")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .collect();
-  },
-});
+// NOTE: getUserReadyDocuments removed — replaced by internal.documents.getForLaminar
+// Knowledge Domain boundary: LAMINAR must NEVER query "documents" directly.
 
 export const getLatestCompletedRun = internalQuery({
   args: { userId: v.string() },
@@ -443,13 +436,13 @@ export const buildKnowledgeGraph = action({
 
     // ── 2. FETCH ALL INPUTS ───────────────────────────────────────────
 
-    // 2a. All user documents
-    const allDocs: Doc<"documents">[] = await ctx.runQuery(
-      internal.laminar.graph.getUserReadyDocuments,
+    // 2a. All ready documents via Knowledge Domain bridge
+    const allReadyDocs: Doc<"documents">[] = await ctx.runQuery(
+      internal.documents.getForLaminar,
       { userId },
     );
-    const readyDocs = allDocs.filter(
-      (d) => d.status === "ready" && d.contentPlain.length > 0,
+    const readyDocs = allReadyDocs.filter(
+      (d) => d.contentPlain.length > 0,
     );
 
     if (readyDocs.length < MIN_DOCUMENTS) {
