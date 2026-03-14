@@ -1,4 +1,21 @@
 /**
+ * LAMINAR CORE — PURE COMPUTATION LAYER
+ *
+ * BOUNDARY RULE: This file must NEVER import from:
+ *   - convex/_generated/
+ *   - convex/server
+ *   - convex/values
+ *   - Any Convex runtime module
+ *
+ * All functions here are pure TypeScript — no side effects, no DB access.
+ * They are fully testable with Vitest without a live Convex environment.
+ *
+ * SC2 Principle: Separation of Concerns (Game Logic vs. Game Loop)
+ * The engine renders frames; the domain calculates damage.
+ * These functions calculate; runner.ts persists.
+ */
+
+/**
  * Temporal Analysis Engine — LAMINAR Stage 2
  *
  * Detects temporal patterns in document access events: how often a document
