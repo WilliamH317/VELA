@@ -17,6 +17,7 @@ import type * as laminar_engine from "../laminar/engine.js";
 import type * as laminar_graph from "../laminar/graph.js";
 import type * as laminar_kmeans from "../laminar/kmeans.js";
 import type * as laminar_queries from "../laminar/queries.js";
+import type * as laminar_runner from "../laminar/runner.js";
 import type * as laminar_temporal from "../laminar/temporal.js";
 import type * as laminar_temporalRunner from "../laminar/temporalRunner.js";
 import type * as laminar_tfidf from "../laminar/tfidf.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   "laminar/graph": typeof laminar_graph;
   "laminar/kmeans": typeof laminar_kmeans;
   "laminar/queries": typeof laminar_queries;
+  "laminar/runner": typeof laminar_runner;
   "laminar/temporal": typeof laminar_temporal;
   "laminar/temporalRunner": typeof laminar_temporalRunner;
   "laminar/tfidf": typeof laminar_tfidf;

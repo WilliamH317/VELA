@@ -327,6 +327,20 @@ export const askQuestion = action({
       console.error("[LIGHTHOUSE] ⚠ Failed to log query:", logError);
     }
 
+    // Silent accessEvent emission for LAMINAR behavioral signals
+    for (const doc of documents) {
+      try {
+        await ctx.runMutation(internal.laminar.access.logAccessInternal, {
+          documentId: doc._id,
+          userId: identity.subject,
+          sessionId: `lighthouse-${Date.now()}`,
+          action: "ai_query" as const,
+        });
+      } catch {
+        // Non-blocking — don't let access logging disrupt the response
+      }
+    }
+
     // Return Structured Response
     return {
       answer: answerText,
@@ -463,6 +477,20 @@ Once you upload relevant documents, I'll be able to search them and provide deta
       console.log(`[LIGHTHOUSE] ✓ Query logged`);
     } catch (logError) {
       console.error("[LIGHTHOUSE] ⚠ Failed to log query:", logError);
+    }
+
+    // Silent accessEvent emission for LAMINAR behavioral signals
+    for (const doc of limitedResults) {
+      try {
+        await ctx.runMutation(internal.laminar.access.logAccessInternal, {
+          documentId: doc._id,
+          userId: identity.subject,
+          sessionId: `lighthouse-${Date.now()}`,
+          action: "ai_query" as const,
+        });
+      } catch {
+        // Non-blocking — don't let access logging disrupt the response
+      }
     }
 
     // Return Structured Response

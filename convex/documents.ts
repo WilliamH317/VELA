@@ -205,6 +205,14 @@ export const create = mutation({
       isPublic: false,
     });
 
+    // Silent LAMINAR trigger — non-blocking, does not affect response time
+    // Only runs if user has >= 3 ready documents (guard inside onDocumentIngested)
+    await ctx.scheduler.runAfter(
+      0,
+      internal.laminar.runner.onDocumentIngested,
+      { documentId, userId: identity.subject }
+    );
+
     return documentId;
   },
 });
@@ -449,6 +457,16 @@ export const updateAfterProcessing = internalMutation({
       processedAt: now,
       updatedAt: now,
     });
+
+    // Silent LAMINAR trigger — document is now "ready" after file processing
+    const doc = await ctx.db.get(args.id);
+    if (doc) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.laminar.runner.onDocumentIngested,
+        { documentId: args.id, userId: doc.userId }
+      );
+    }
   },
 });
 
@@ -476,6 +494,30 @@ export const updateStatus = internalMutation({
         errorMessage: args.errorMessage,
       }),
     });
+  },
+});
+
+/**
+ * KNOWLEDGE DOMAIN BRIDGE — Intelligence Context Access Point
+ *
+ * This is the ONLY authorized entry point for LAMINAR to read document data.
+ * The Intelligence Domain (convex/laminar/) must NEVER call ctx.db.query("documents")
+ * directly. It must always go through this function.
+ *
+ * Why: When multi-tenant team features land, per-workspace filtering logic
+ * lives here — in one place. LAMINAR files don't need to change.
+ *
+ * SC2 Principle: Bounded Contexts — 'Resource' means different things
+ * to different parts of the system. Keep definitions separate.
+ */
+export const getForLaminar = internalQuery({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    return ctx.db
+      .query("documents")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .filter((q) => q.eq(q.field("status"), "ready"))
+      .collect();
   },
 });
 
