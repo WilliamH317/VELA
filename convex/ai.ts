@@ -328,17 +328,14 @@ export const askQuestion = action({
     }
 
     // Silent accessEvent emission for LAMINAR behavioral signals
+    // Fire-and-forget via scheduler — zero latency impact on AI response
     for (const doc of documents) {
-      try {
-        await ctx.runMutation(internal.laminar.access.logAccessInternal, {
-          documentId: doc._id,
-          userId: identity.subject,
-          sessionId: `lighthouse-${Date.now()}`,
-          action: "ai_query" as const,
-        });
-      } catch {
-        // Non-blocking — don't let access logging disrupt the response
-      }
+      await ctx.scheduler.runAfter(0, internal.laminar.access.logAccessInternal, {
+        documentId: doc._id,
+        userId: identity.subject,
+        sessionId: `lighthouse-${Date.now()}`,
+        action: "ai_query" as const,
+      });
     }
 
     // Return Structured Response
@@ -480,17 +477,14 @@ Once you upload relevant documents, I'll be able to search them and provide deta
     }
 
     // Silent accessEvent emission for LAMINAR behavioral signals
+    // Fire-and-forget via scheduler — zero latency impact on AI response
     for (const doc of limitedResults) {
-      try {
-        await ctx.runMutation(internal.laminar.access.logAccessInternal, {
-          documentId: doc._id,
-          userId: identity.subject,
-          sessionId: `lighthouse-${Date.now()}`,
-          action: "ai_query" as const,
-        });
-      } catch {
-        // Non-blocking — don't let access logging disrupt the response
-      }
+      await ctx.scheduler.runAfter(0, internal.laminar.access.logAccessInternal, {
+        documentId: doc._id,
+        userId: identity.subject,
+        sessionId: `lighthouse-${Date.now()}`,
+        action: "ai_query" as const,
+      });
     }
 
     // Return Structured Response
