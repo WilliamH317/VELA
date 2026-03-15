@@ -3940,3 +3940,270 @@ Phase 6: LAUNCH (Days 26-30)                                    🔒
 - Documentation and onboarding flow
 - Public launch and first customer acquisition
 
+# Day 20 - [3/15/2026]
+
+**Format:** Appended after each completed sprint phase or major milestone.
+**Last entry:** After Day 16 (ARCHIPELAGOS complete, LAMINAR Stage 1 shipped).
+**This entry:** Days 17-21 — LAMINAR Stages 2-5 + SC2 Architecture Refactor + Phase 5 start.
+
+---
+
+## Entry: Days 17-21 — LAMINAR Complete + Architecture Maturity
+
+**Date written:** March 14, 2026
+**Sprint progress:** Day 21 of 30 (67% complete)
+**Phase:** LAMINAR Differentiation complete; Polish & Billing starting
+
+---
+
+### What Was Built (Summary)
+
+| Day | Deliverable | Key Metric |
+|---|---|---|
+| 17 | CURRENTS — temporal patterns + co-occurrence | accessEvents + temporalPatterns deployed |
+| 18 | Knowledge Graph — 4-signal edge fusion | 21 edges, 11/11 tests pass, 0 NaN |
+| 19 | CASCADE — BFS butterfly effect prediction | cascadeRuns + cascadeImpacts verified |
+| 20 | Fractal Wisdom + SC2 architecture refactor | 5 refactor phases, 0 TypeScript errors |
+| 21 | Phase 5 start — HELM redesign, LoadingWave | LAMINAR summary widget on dashboard |
+
+---
+
+### Breakthrough #1: Schema Drift Is the #1 Silent Hazard (Day 18)
+
+**Before Day 18:** "Documentation is documentation. If the sprint plan says `membershipScore`, that's what the deployed schema has."
+
+**What happened:** On Day 18, six field names in deployed `convex/schema.ts` diverged from every document in the project. The algorithm would have read `undefined` instead of numeric values, producing silent NaN throughout the knowledge graph computation — not a crash, not an error message. Just wrong numbers.
+
+**The six mismatches found:**
+
+| Documentation said | Schema actually has | Silent failure mode |
+|---|---|---|
+| `membershipScore` | `probability` | Fusion reads undefined — NaN |
+| `label` | `name` | Cluster cards display blank |
+| `topTerms` | `topKeywords` | Keyword extraction fails silently |
+| `"complete"` / `"error"` | `"completed"` / `"failed"` | Status checks never match |
+| create new `edges` table | `knowledgeEdges` already exists | Duplicate table, orphaned data |
+| `createdAt` (clusteringRuns) | `startedAt` | Timestamp queries return nothing |
+
+**Aha moment:**
+> "The schema is not documentation. The schema is a deployed artifact with its own state. These are two different things. I have been treating them as the same thing. They diverge silently, and no compiler catches it."
+
+**The fix:** Phase 0 Schema Audit is now mandatory before every integration day — read `convex/schema.ts` directly before writing a single line of code that touches a table. Not the sprint plan. Not the project knowledge docs. The file.
+
+**PowerShell commands now run before every integration session:**
+```powershell
+Get-Content convex/schema.ts
+Select-String -Pattern "import.*convex|import.*_generated" -Path convex/laminar/*.ts
+Select-String -Pattern 'query\("documents"\)|query\("users"\)' -Path convex/laminar/*.ts
+```
+
+**Pattern internalized:** Documentation describes intent. The deployed schema describes reality. Always read reality.
+
+**Confidence delta:** 8/10 → forced reset to 7/10 (humbling) → rebuilt to 9/10 after audit protocol established.
+
+---
+
+### Breakthrough #2: Non-Blocking vs. Blocking in AI Hot Paths (Day 20)
+
+**Before:** "Logging that a user asked a question seems like a small operation. Just `await ctx.runMutation(...)` inline in the LIGHTHOUSE action."
+
+**What happened:** Both LIGHTHOUSE modes (`askQuestion` and `generateAnswer`) were emitting access events with a blocking `ctx.runMutation` call inside the AI action handler. This added database write latency to every AI streaming response — synchronously, before the response could continue.
+
+**The diagnosis:**
+```typescript
+// What was there — blocks streaming response
+await ctx.runMutation(internal.laminar.access.logAccessInternal, {
+  documentId: doc._id,
+  userId: identity.subject,
+  action: "ai_query",
+  timestamp: Date.now(),
+});
+
+// What replaced it — fire-and-forget, zero latency impact
+await ctx.scheduler.runAfter(0, internal.laminar.access.logAccessInternal, {
+  documentId: doc._id,
+  userId: identity.subject,
+  action: "ai_query",
+  timestamp: Date.now(),
+});
+```
+
+**Aha moment:**
+> "Logging is a side effect. The user asked a question — they want an answer, not a receipt. The access log matters eventually, but it does not need to happen before the answer arrives. Fire-and-forget is not a hack; it is the architecturally correct choice for side effects in a hot path."
+
+**Pattern internalized:** Any operation that is logging, analytics, or bookkeeping belongs in `ctx.scheduler.runAfter(0, ...)`. Operations that affect the result the user is waiting for belong inline. The distinction is: does the user need this to happen before they see a response? If no, it should not block.
+
+**Verified result:** 14 insertions, 20 deletions. Both LIGHTHOUSE modes confirmed clean via `Select-String` after the fix.
+
+---
+
+### Breakthrough #3: Software Architecture Has Physical Analogies (Day 20 — SC2 Refactor)
+
+**Before:** Separation of Concerns, Bounded Contexts, Event-Driven Design were abstract principles read in documentation — understood conceptually but not felt.
+
+**What happened:** Derived five architecture improvements by cross-referencing StarCraft II engine design principles against the LAMINAR codebase. Implementing them over one day made the principles concrete.
+
+**The five patterns and what they felt like:**
+
+**1. SoC Boundary (Game Loop vs. Game Logic)**
+The rendering engine draws units; domain logic calculates damage. In VELA: `tfidf.ts` computes math, `runner.ts` writes to the database. They must not mix.
+
+Discovered that `runner.ts` had math and persistence fused. Extracting them meant the math is now testable without a live Convex environment.
+
+*Felt like:* Separating kitchen prep from plating. Either can change without touching the other.
+
+**2. Bounded Context (Resource means different things in different domains)**
+The Knowledge Domain owns documents. The Intelligence Domain (LAMINAR) reasons about them. One crossing point only: `internal.documents.getForLaminar`.
+
+Every `ctx.db.query("documents")` inside `laminar/` was a boundary violation — fixed in `engine.ts` and `graph.ts`.
+
+*Felt like:* Installing a one-way valve. Data flows from Knowledge to Intelligence but the Intelligence layer never reaches back into raw storage.
+
+**3. Event-Driven (UnitDied event vs. polling "is the unit dead?")**
+Instead of manually triggering LAMINAR, document creation now fires `ctx.scheduler.runAfter(0, internal.laminar.runner.onDocumentIngested, ...)` automatically.
+
+*Felt like:* LAMINAR went from being a tool you use to being a system that listens.
+
+**4. Composable Pipeline (Building units from components, not inheritance)**
+`LaminarStage` interface + `runPipeline` orchestrator means adding a sixth stage means writing one file that implements the interface, adding it to an array. No touching adjacent stages.
+
+*Felt like:* Adding a train car to a track instead of rebuilding the locomotive.
+
+**5. Signal Polymorphism (IAttackable hides unit type)**
+`IProcessable` with `MarkdownProcessor`, `PdfProcessor`, `PlaintextProcessor` means LAMINAR receives `DocumentSignals` — richer input than raw `contentPlain` strings — without caring what file type produced them.
+
+*Felt like:* Teaching the algorithm to read between the lines, not just the lines.
+
+**Aha moment:**
+> "Architecture principles feel abstract until you implement them. Once you live through the boundary violation and fix it, SoC is not a principle — it is a scar. The scar is better than forgetting the lesson."
+
+**Pattern internalized:** Architectural rules should be encoded as automated checks, not remembered intentions. The Phase 0 PowerShell commands enforce boundaries mechanically so they cannot be accidentally broken.
+
+---
+
+### Breakthrough #4: TS7022 Is a Circular Inference Problem, Not a Bug (Day 16 — Retroactive Understanding)
+
+**Before (Day 16):** Added explicit `Promise<ReturnType>` annotations to action handlers because it fixed a TypeScript error. Did not fully understand why.
+
+**Understanding crystallized (Day 17-20):** TypeScript infers the return type of an action handler by looking at what the function returns. If the function calls `internal.*` from the same module, TypeScript tries to infer the type of the internal function by looking at the handler that calls it — creating a cycle.
+
+The explicit annotation breaks the cycle by giving TypeScript a fixed type to work with instead of asking it to infer one.
+
+**Mental model now:**
+> "TypeScript is a graph traversal. If it tries to infer type A from function B, and type B from function A, it loops. Explicit annotations are exit ramps. When Claude Code generates a new action, the first thing I check now is whether the handler has `Promise<ReturnType>` on it."
+
+**Pattern internalized:** Every Convex action that calls `internal.*` from the same module gets an explicit return type. This is not optional and never will be.
+
+---
+
+### Breakthrough #5: The 25-Item Batch Limit Is a Computation Budget, Not an Arbitrary Rule (Day 16 — Deepened Understanding)
+
+**Before:** "The batch limit is 25 because Convex says so. Respect it."
+
+**Understanding developed:** Convex mutations have a ~8KB argument limit. At approximately 200 bytes per LAMINAR record (cluster, membership, edge), 25 items approaches 5KB — well under the limit with margin. The original attempt used 50 items, hit the limit, and the mutation silently dropped data.
+
+The lesson is not "use 25." The lesson is: **Convex mutations have a data budget. Know your record size. Set your batch size accordingly.**
+
+**Pattern internalized:**
+```typescript
+// CORRECT — respect the budget
+for (let i = 0; i < items.length; i += 25) {
+  await ctx.runMutation(internal.module.batchInsert, {
+    items: items.slice(i, i + 25),
+  });
+}
+```
+
+If record sizes change substantially in future stages, recalculate. Do not blindly copy the 25-item pattern without understanding why.
+
+---
+
+### Breakthrough #6: Delegation Pattern Maturity — What Claude Code Gets Right vs. What It Doesn't (Days 16-20)
+
+After five LAMINAR stages delegated sequentially to Claude Code, clear patterns emerged.
+
+**What Claude Code consistently gets right on first attempt:**
+- Pure TypeScript algorithms (TF-IDF math, BFS traversal, softmax, K-Means)
+- Convex query patterns (withIndex, auth check, filter)
+- TypeScript type definitions and interfaces
+- React component structure with Shadcn primitives
+
+**What Claude Code consistently gets wrong without explicit prompt constraints:**
+- Brand colors: defaults to `blue-500` or `cyan-400`. Solution: include `#1B3D5C` and `#00BCD4` in every frontend prompt.
+- Loading states: generates `animate-spin` circular spinners. Solution: paste the wave animation pattern directly into the prompt.
+- Schema field names: uses documentation field names, not deployed ones. Solution: paste Phase 0 audit results into every delegation prompt.
+- Action handler return types: omits `Promise<ReturnType>`. Solution: state this requirement explicitly.
+- Batch size: generates single large mutations. Solution: state the 25-item limit explicitly.
+
+**Aha moment:**
+> "Claude Code is not a co-developer who reads the CLAUDE.md once and remembers it. Claude Code is a very capable contractor who reads only what you give them for that job. Every prompt needs the relevant constraints restated. Assume nothing carries over."
+
+**Pattern internalized:** Delegation prompts are not conversational — they are job specifications. The spec must include: verified schema field names, brand hex values, known anti-patterns to avoid, and explicit return type requirements.
+
+---
+
+### What Patterns Are Now Automatic (No Longer Need Reminders)
+
+**Can implement without prompting:**
+- Phase 0 schema audit before any integration day
+- `internalMutation` for all LAMINAR write operations
+- `ctx.scheduler.runAfter(0, ...)` for access event logging
+- `identity.subject` as userId (never `tokenIdentifier`)
+- Explicit `Promise<ReturnType>` on action handlers
+- 25-item batching for Convex mutations
+- Wave/pulse animations instead of spinners
+- Conditional spreading for optional fields with `exactOptionalPropertyTypes`
+
+**Recognized on sight (can debug independently):**
+- TS7022 circular inference — add return type annotation
+- Undefined rendering — `useQuery` is loading, not empty
+- Silent NaN in LAMINAR output — schema drift, run Phase 0
+- Slow LIGHTHOUSE responses — check for blocking mutations in hot path
+
+---
+
+### What Still Requires Deliberate Attention
+
+- Brand compliance in generated code — check every hex value, every copy string
+- Stripe webhook security pattern (`constructEvent` before any processing)
+- `exactOptionalPropertyTypes` violations — conditional spreading is not yet instinctive
+- Pagination considerations for lists at scale
+
+---
+
+### Confidence Calibration
+
+| Skill Area | Day 16 | Day 21 |
+|---|---|---|
+| Convex patterns (auth, queries, mutations) | 8/10 | 9/10 |
+| TypeScript strict mode | 6/10 | 8/10 |
+| LAMINAR algorithm design | 7/10 | 9/10 |
+| Architecture decisions (SoC, bounded context) | 5/10 | 8/10 |
+| Claude Code delegation | 6/10 | 9/10 |
+| Schema design | 8/10 | 9/10 |
+| Stripe/billing integration | 2/10 | 3/10 (next up) |
+| Overall | 7/10 | 9/10 |
+
+---
+
+### The One Thing That Would Have Saved the Most Time
+
+**Deploy and verify the schema before writing any algorithm code.**
+
+The Day 18 schema drift discovery happened after all the integration code was already written. A 15-minute schema audit at the start of Day 18 would have prevented hours of tracking down why values came back as `undefined`. This lesson generalized to all future days: Phase 0 is not overhead — it is the work.
+
+---
+
+### Quote of the Phase
+
+> "The hardest bugs to find are the ones that don't error. A crash tells you where to look. A silent wrong answer makes you question your assumptions."
+
+This is what schema drift feels like. The code runs. The tests pass. The data is wrong.
+
+The audit protocol is the answer: trust deployed reality, not documented intent.
+
+---
+
+**Entry written:** March 14, 2026
+**Next entry:** After Day 25 (Phase 5 complete — billing live, onboarding shipped, regression clean)
+**Confidence entering Phase 5:** 9/10
