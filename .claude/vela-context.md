@@ -299,3 +299,15 @@ Co-author line on all commits: `Co-Authored-By: Claude Opus 4.6 (1M context) <no
 1. Avoid multiple page redirects (~1.8–2.0s savings)
 2. Reduce unused JavaScript (~1.0–1.9s savings)
 3. Minify JavaScript (~0.9–1.4s savings)
+
+## Day 22 Lighthouse Final (production build)
+
+| Route     | Performance | Accessibility | LCP (ms) | CLS   |
+|-----------|-------------|---------------|----------|-------|
+| home      | 85          | 100           | 3,884    | 0.000 |
+| dashboard | 74          | 95            | 5,421    | 0.010 |
+| search    | 73          | 100           | 6,444    | 0.000 |
+
+**Performance pattern:** Clerk/Convex provider scoping to `(dashboard)` route group removed ~1,600ms overhead from marketing page. LCP on dashboard/search dominated by Clerk dev-mode handshake — resolves in production with persistent cookies.
+
+**Contrast pattern:** White on `#00BCD4` = 2.19:1 (fails AA). Navy `#1B3D5C` on `#00BCD4` = 5.2:1 (passes AA). Use navy for all text on teal backgrounds.
