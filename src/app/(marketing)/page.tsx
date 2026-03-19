@@ -37,12 +37,15 @@ export default function HomePage() {
 
       {/* Hero Section */}
       <main className="flex-1">
-        <section className="container mx-auto px-4 py-24 text-center">
+        <section className="max-w-5xl mx-auto px-4 py-24 text-center">
           <div className="mx-auto max-w-3xl space-y-8">
-            <h1 className="text-5xl font-bold leading-tight text-[#1B3D5C] dark:text-white md:text-6xl">
+            <h1
+              className="text-5xl font-bold leading-tight text-[#1B3D5C] dark:text-white md:text-6xl"
+              style={{ color: "#1B3D5C" }}
+            >
               Navigate Your Knowledge
             </h1>
-            <p className="text-xl text-muted-foreground">
+            <p className="text-xl text-slate-500 dark:text-slate-400">
               Stop searching through scattered documents. VELA uses chaos theory
               to turn your client briefs, SOWs, and meeting notes into instant answers.
             </p>
@@ -67,7 +70,7 @@ export default function HomePage() {
 
         {/* Features */}
         <section className="border-t border-[#1B3D5C]/10 bg-gray-50 dark:bg-gray-900 py-24">
-          <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto px-4">
             <h2 className="text-center text-3xl font-bold text-[#1B3D5C] dark:text-white mb-12">
               Built for Teams Who Can&#39;t Afford to Lose Knowledge
             </h2>
@@ -79,7 +82,7 @@ export default function HomePage() {
                 <h3 className="mb-2 text-xl font-semibold text-[#1B3D5C] dark:text-white">
                   Intelligent Navigation
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-slate-500 dark:text-slate-300">
                   Client projects self-organize — no folders or tags needed
                 </p>
               </div>
@@ -90,7 +93,7 @@ export default function HomePage() {
                 <h3 className="mb-2 text-xl font-semibold text-[#1B3D5C] dark:text-white">
                   Instant Answers
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-slate-500 dark:text-slate-300">
                   Ask questions, get cited answers from your client docs
                 </p>
               </div>
@@ -101,7 +104,7 @@ export default function HomePage() {
                 <h3 className="mb-2 text-xl font-semibold text-[#1B3D5C] dark:text-white">
                   Time Saved
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-slate-500 dark:text-slate-300">
                   Stop wasting billable hours searching across Drive, Slack, and email
                 </p>
               </div>

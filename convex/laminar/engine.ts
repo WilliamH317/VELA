@@ -365,7 +365,7 @@ export const run = action({
 
       // ── 11. Cluster names from top 3 keywords ──────────────────────
       const clusterNames = clusterKeywords.map((kw) =>
-        kw.slice(0, NAME_KEYWORDS_COUNT).join(" & "),
+        kw.slice(0, NAME_KEYWORDS_COUNT).join(" "),
       );
 
       // Per-cluster coherence scores

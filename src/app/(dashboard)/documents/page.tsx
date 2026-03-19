@@ -184,9 +184,23 @@ export default function DocumentsPage() {
                       </div>
                       
                       {/* Content Preview */}
-                      {doc.status === "ready" && doc.contentPreview && (
+                      {doc.status === "ready" && (doc.contentPlain || doc.contentPreview) && (
                         <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                          {doc.contentPreview}
+                          {(() => {
+                            const raw = doc.contentPlain ?? doc.contentPreview ?? "";
+                            const preview = raw
+                              .replace(/#{1,6}\s/g, "")
+                              .replace(/[|\\[\]`*_~]/g, "")
+                              .replace(/-{2,}/g, " ")
+                              .replace(/\s+/g, " ")
+                              .trim()
+                              .slice(0, 120);
+                            return preview.length === 0
+                              ? ""
+                              : raw.trim().length > 120
+                                ? preview + "..."
+                                : preview;
+                          })()}
                         </p>
                       )}
                       
