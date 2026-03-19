@@ -45,7 +45,7 @@ export default function HomePage() {
             >
               Navigate Your Knowledge
             </h1>
-            <p className="text-xl text-slate-500 dark:text-slate-400">
+            <p className="text-xl text-slate-600 dark:text-slate-400">
               Stop searching through scattered documents. VELA uses chaos theory
               to turn your client briefs, SOWs, and meeting notes into instant answers.
             </p>
@@ -82,7 +82,7 @@ export default function HomePage() {
                 <h3 className="mb-2 text-xl font-semibold text-[#1B3D5C] dark:text-white">
                   Intelligent Navigation
                 </h3>
-                <p className="text-slate-500 dark:text-slate-300">
+                <p className="text-slate-600 dark:text-slate-300">
                   Client projects self-organize — no folders or tags needed
                 </p>
               </div>
@@ -93,7 +93,7 @@ export default function HomePage() {
                 <h3 className="mb-2 text-xl font-semibold text-[#1B3D5C] dark:text-white">
                   Instant Answers
                 </h3>
-                <p className="text-slate-500 dark:text-slate-300">
+                <p className="text-slate-600 dark:text-slate-300">
                   Ask questions, get cited answers from your client docs
                 </p>
               </div>
@@ -104,7 +104,7 @@ export default function HomePage() {
                 <h3 className="mb-2 text-xl font-semibold text-[#1B3D5C] dark:text-white">
                   Time Saved
                 </h3>
-                <p className="text-slate-500 dark:text-slate-300">
+                <p className="text-slate-600 dark:text-slate-300">
                   Stop wasting billable hours searching across Drive, Slack, and email
                 </p>
               </div>

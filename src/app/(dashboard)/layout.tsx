@@ -1,6 +1,8 @@
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { Home, FileText, Upload, Search, Lightbulb, MapPin, GitBranch } from "lucide-react";
+import { Providers } from "@/components/providers";
+import { UserSetup } from "@/components/user-setup";
 
 export default function DashboardLayout({
   children,
@@ -8,6 +10,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
+    <Providers>
+      <UserSetup />
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       {/* ========================================
           NAVIGATION BAR
@@ -156,5 +160,6 @@ export default function DashboardLayout({
         </div>
       </footer>
     </div>
+    </Providers>
   );
 }

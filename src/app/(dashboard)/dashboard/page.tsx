@@ -47,7 +47,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {/* CARGO HOLD */}
         <div
-          className="bg-slate-50 rounded-xl p-6"
+          className="bg-slate-50 rounded-xl p-6 min-h-[88px]"
           style={{ backgroundColor: "rgb(248 250 252)", borderRadius: "12px", padding: "24px" }}
         >
           {documents === undefined ? (
@@ -69,7 +69,7 @@ export default function DashboardPage() {
 
         {/* ARCHIPELAGOS */}
         <div
-          className="bg-slate-50 rounded-xl p-6"
+          className="bg-slate-50 rounded-xl p-6 min-h-[88px]"
           style={{ backgroundColor: "rgb(248 250 252)", borderRadius: "12px", padding: "24px" }}
         >
           {clusteringStatus === undefined ? (
@@ -91,7 +91,7 @@ export default function DashboardPage() {
 
         {/* LAST CHART */}
         <div
-          className="bg-slate-50 rounded-xl p-6"
+          className="bg-slate-50 rounded-xl p-6 min-h-[88px]"
           style={{ backgroundColor: "rgb(248 250 252)", borderRadius: "12px", padding: "24px" }}
         >
           {clusteringStatus === undefined ? (
@@ -115,7 +115,7 @@ export default function DashboardPage() {
 
         {/* CONNECTIONS */}
         <div
-          className="bg-slate-50 rounded-xl p-6"
+          className="bg-slate-50 rounded-xl p-6 min-h-[88px]"
           style={{ backgroundColor: "rgb(248 250 252)", borderRadius: "12px", padding: "24px" }}
         >
           {graphSummary === undefined ? (

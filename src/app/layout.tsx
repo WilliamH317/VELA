@@ -1,7 +1,12 @@
 // app/layout.tsx
 import "./globals.css";
-import { Providers } from "@/components/providers";
-import { UserSetup } from "@/components/user-setup";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "VELA — Navigate Your Knowledge",
+  description:
+    "AI-powered knowledge management for agency teams. Stop searching, start navigating.",
+};
 
 export default function RootLayout({
   children,
@@ -10,12 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <Providers>
-          <UserSetup />
-          {children}
-        </Providers>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

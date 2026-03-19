@@ -61,17 +61,19 @@ app/
 ├── (dashboard)/connections/page.tsx             ✅  (LAMINAR Stage 3 — Knowledge Graph)
 ├── (dashboard)/cascade/page.tsx                 ✅  (LAMINAR Stage 4)
 ├── (dashboard)/wisdom/page.tsx                  ✅  (LAMINAR Stage 5)
+├── (dashboard)/test-center/page.tsx             ✅  (Day 21 — in-memory LAMINAR simulator)
 └── (marketing)/page.tsx                         ✅
 ```
 
 ### Components
 ```
 components/
-├── ui/                     ✅ (Shadcn)
-├── user-setup.tsx          ✅
-├── document-card.tsx       ✅
-├── search-box.tsx          ✅
-└── cascade-preview.tsx     ✅
+├── ui/                          ✅ (Shadcn)
+├── user-setup.tsx               ✅
+├── loading-wave.tsx             ✅  (Day 21 — wave/pulse loader, no spinners)
+├── laminar-summary-widget.tsx   ✅  (Day 21 — HELM cluster preview + stability badge)
+├── search-box.tsx               ✅
+└── cascade-preview.tsx          ✅
 ```
 
 ### Convex Backend
@@ -217,7 +219,7 @@ Stage 5 (Fractal Wisdom) → provides:
 
 - **PDF text extraction:** `pdf-parse` had module resolution issues in Convex runtime during Phase 3 — verify current status before assuming resolved.
 - **No pagination:** Document list queries return all documents. Users with 100+ docs will see performance degradation. Needs pagination.
-- **No test runner:** No Jest, Vitest, or test framework configured. Validation is manual integration testing.
+- **Test runner added Day 21:** Vitest configured (`vitest.config.ts`), 29 tests across `tfidf.test.ts`, `kmeans.test.ts`, `confidence.test.ts`. Schema audit script at `scripts/schema-audit.ts` (9/9 invariants). Run: `npm test`, `npm run audit:schema`.
 - **LAMINAR cold-start:** With < 3 documents, clustering is skipped (`onDocumentIngested` guard). With < 10 docs, behavioral/temporal signals are near-zero — content similarity (0.60 weight) dominates appropriately.
 - **O(n²) graph scaling:** Edge computation throws a protective error at 200+ documents. Partition by cluster for larger sets.
 - **`processors.ts` not yet wired into hot path:** `IProcessable` and `buildTFIDFFromSignals` are deployed as infrastructure but `runner.ts` still uses the original `contentPlain` path. Activate only after Day 25 regression testing passes.
@@ -238,6 +240,8 @@ Stage 5 (Fractal Wisdom) → provides:
 - **Missing return type annotations:** TS7022 on any action referencing `internal.*` from same file. Always annotate explicitly.
 - **Brand drift in generated code:** Claude Code defaults to `blue-500`. Always specify `#1B3D5C` and `#00BCD4` explicitly in prompts.
 - **Blocking logging in hot path:** `ctx.runMutation` for access events blocks streaming — always use `ctx.scheduler.runAfter(0, ...)`.
+- **Tailwind v4 config pattern (discovered Day 21):** `globals.css` requires `@import "tailwindcss";` then `@config "../../tailwind.config.ts";` then `@source "../app/**/*.{ts,tsx}";` and `@source "../components/**/*.{ts,tsx}";`. The Tailwind `container` class conflict with v4 was the root cause of all layout width bugs. `@config` restores the v3 container setup (`center: true`, `padding: "2rem"`, `screens: { "2xl": "1400px" }`). Old v3 `@tailwind base/components/utilities` directives are silently ignored by v4.
+- **Document preview pattern (Day 21):** Always use `contentPlain ?? contentPreview ?? ''` as source. Always apply markdown strip chain before rendering any preview: `replace(/#{1,6}\s/g, '')`, `replace(/[|\\[\]`*_~]/g, '')`, `replace(/-{2,}/g, ' ')`, `replace(/\s+/g, ' ')`. HELM uses 80-char truncation; documents list uses 120-char.
 
 ---
 
@@ -269,3 +273,29 @@ git tag -a day-20-laminar-complete -m "Day 20: All 5 LAMINAR stages + SC2 refact
 ```
 
 Co-author line on all commits: `Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>`
+
+---
+
+## Day 22 Lighthouse Baseline (recorded 2026-03-19)
+
+| Route        | Performance | Accessibility | LCP (ms) | CLS   | FCP (ms) | TBT (ms) |
+|--------------|-------------|---------------|----------|-------|----------|----------|
+| home         | 53          | 90            | 6243     | 0.000 | 2145     | 937      |
+| dashboard    | 49          | 96            | 10851    | 0.000 | 2180     | 965      |
+| archipelagos | 50          | 95            | 6531     | 0.000 | 2137     | 1367     |
+| search       | 51          | 96            | 10773    | 0.000 | 2443     | 905      |
+
+**FAILING THRESHOLDS:**
+- home: performance 53 < 70
+- home: LCP 6243ms > 2500ms
+- dashboard: performance 49 < 70
+- dashboard: LCP 10851ms > 2500ms
+- archipelagos: performance 50 < 70
+- archipelagos: LCP 6531ms > 2500ms
+- search: performance 51 < 70
+- search: LCP 10773ms > 2500ms
+
+**Top Opportunities (all routes):**
+1. Avoid multiple page redirects (~1.8–2.0s savings)
+2. Reduce unused JavaScript (~1.0–1.9s savings)
+3. Minify JavaScript (~0.9–1.4s savings)

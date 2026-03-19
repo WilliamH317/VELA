@@ -11,7 +11,11 @@ export default function LaminarSummaryWidget() {
 
   // Loading state
   if (clusteringStatus === undefined || clusterData === undefined) {
-    return <LoadingWave message="Charting your ARCHIPELAGOS..." />;
+    return (
+      <div className="min-h-[200px]">
+        <LoadingWave message="Charting your ARCHIPELAGOS..." />
+      </div>
+    );
   }
 
   // Empty / not completed state
@@ -22,7 +26,7 @@ export default function LaminarSummaryWidget() {
     clusterData.clusters.length === 0
   ) {
     return (
-      <div className="rounded-xl border border-[#1B3D5C]/10 bg-white p-6">
+      <div className="rounded-xl border border-[#1B3D5C]/10 bg-white p-6 min-h-[200px]">
         <div className="text-center py-8">
           <p className="text-slate-500 text-sm">
             Still waters — upload documents through PORT to discover
@@ -71,7 +75,7 @@ export default function LaminarSummaryWidget() {
     topClusters[0]?.topKeywords.slice(0, 3) ?? [];
 
   return (
-    <div className="rounded-xl border border-[#1B3D5C]/10 overflow-hidden bg-white">
+    <div className="rounded-xl border border-[#1B3D5C]/10 overflow-hidden bg-white min-h-[200px]">
       {/* Header stripe */}
       <div className="bg-[#1B3D5C] px-6 py-4 flex items-center justify-between">
         <div>

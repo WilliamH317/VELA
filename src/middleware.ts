@@ -9,23 +9,28 @@ const isProtectedRoute = createRouteMatcher([
   '/settings(.*)',
 ]);
 
-// Define routes that are always public
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/api/webhooks/(.*)',
-]);
-
 export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req) && isProtectedRoute(req)) {
+  if (isProtectedRoute(req)) {
     await auth.protect();
   }
 });
 
 export const config = {
+  // Only run middleware on routes that actually need auth — skip marketing homepage entirely
   matcher: [
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    '/dashboard/:path*',
+    '/documents/:path*',
+    '/search/:path*',
+    '/settings/:path*',
+    '/sign-in/:path*',
+    '/sign-up/:path*',
+    '/archipelagos/:path*',
+    '/connections/:path*',
+    '/lighthouse/:path*',
+    '/upload/:path*',
+    '/test-center/:path*',
+    '/cascade/:path*',
+    '/wisdom/:path*',
     '/(api|trpc)(.*)',
   ],
 };
