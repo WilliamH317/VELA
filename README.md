@@ -7,7 +7,8 @@
 [![Convex](https://img.shields.io/badge/Convex-Real--time-orange?style=flat-square)](https://convex.dev/)
 [![Claude](https://img.shields.io/badge/Claude-Sonnet%204-blue?style=flat-square)](https://anthropic.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-[![Status](https://img.shields.io/badge/Sprint-Day%2021%2F30-success?style=flat-square)](https://github.com/WilliamH317/VELA)
+[![Stripe](https://img.shields.io/badge/Stripe-Billing-635BFF?style=flat-square&logo=stripe)](https://stripe.com/)
+[![Status](https://img.shields.io/badge/Sprint-Day%2023%2F30-success?style=flat-square)](https://github.com/WilliamH317/VELA)
 
 ---
 
@@ -39,7 +40,7 @@ A weighted knowledge graph connecting documents through 4 signal types: content 
 
 ### CASCADE — Butterfly Effect Prediction
 
-When a document changes, VELA predicts which other documents may be affected. BFS traversal of the knowledge graph with exponential decay: `impact = current_impact x edge_weight x 0.8^depth`. Minimum threshold 0.30, maximum depth 3. Impact scores decrease monotonically; cycles are prevented by a visited set. Inline cascade preview warns when editing a highly-connected document.
+When a document changes, VELA predicts which other documents may be affected. BFS traversal of the knowledge graph with exponential decay: `impact = current_impact × edge_weight × 0.8^depth`. Minimum threshold 0.30, maximum depth 3. Impact scores decrease monotonically; cycles are prevented by a visited set. Inline cascade preview warns when editing a highly-connected document.
 
 ### Fractal Wisdom — Multi-Scale Pattern Recognition
 
@@ -55,7 +56,11 @@ Lightning-fast search across all documents using Convex's search indexes. Real-t
 
 ### PORT — Document Upload
 
-Drag-and-drop file upload supporting PDF, TXT, and Markdown. Automatic full-text indexing, server-side PDF text extraction, duplicate detection via SHA-256 content hashing, and real-time synchronization. On upload, LAMINAR automatically re-clusters if 3+ documents exist — no manual trigger needed.
+Drag-and-drop file upload supporting PDF, TXT, and Markdown. Automatic full-text indexing, server-side PDF text extraction, duplicate detection via SHA-256 content hashing, and real-time synchronization. On upload, LAMINAR automatically re-clusters if 3+ documents exist — no manual trigger needed. Document limits enforced at the Convex mutation layer by subscription tier.
+
+### Stripe Billing — Three-Tier Subscriptions
+
+Recurring subscription billing via Stripe Checkout. Tier enforcement is applied at the Convex query layer — not just the UI. Free users see real computed LAMINAR cluster names behind a cosmetic blur. Upgrades unlock immediately via webhook — no page reload required. Subscription cancellations downgrade in real time via `customer.subscription.deleted`.
 
 ### Authentication and Real-Time Sync
 
@@ -88,8 +93,7 @@ Stage 4: CASCADE       -- BFS butterfly effect prediction with exponential decay
 Stage 5: Fractal Wisdom -- Multi-scale cross-document pattern recognition
 ```
 
-Document uploads auto-trigger the pipeline via `ctx.scheduler.runAfter(0, ...)` — reactive,
-non-blocking.
+Document uploads auto-trigger the pipeline via `ctx.scheduler.runAfter(0, ...)` — reactive, non-blocking.
 
 ### Stage Status
 
@@ -103,11 +107,11 @@ non-blocking.
 
 ### Knowledge Graph Signal Weights
 
-| Signal | Cold-Start Weight | Source |
+| Signal | Weight | Source |
 |---|---|---|
 | Content Similarity | 0.60 | TF-IDF cosine similarity |
 | Structural Links | 0.20 | Shared tags + cluster membership |
-| Temporal Proximity | 0.10 | `0.7 x exp(-timeDiffHours / 8)` |
+| Temporal Proximity | 0.10 | `0.7 × exp(-timeDiffHours / 8)` |
 | Behavioral Co-occurrence | 0.10 | Session-based co-access counts |
 
 ### Architecture
@@ -119,6 +123,7 @@ Every stage is pure TypeScript in the Convex runtime — no Python, no sklearn, 
 - **Reactive trigger:** Document uploads auto-enqueue LAMINAR via `ctx.scheduler.runAfter(0, ...)`
 - **Non-blocking signals:** Access event logging never blocks AI streaming responses
 - **Composable pipeline:** `LaminarStage` interface + `runPipeline` orchestrator in `pipeline.ts`
+- **Tier gating:** `convex/lib/tierGuard.ts` enforces feature access per subscription tier at the query layer
 
 ---
 
@@ -132,6 +137,7 @@ Every stage is pure TypeScript in the Convex runtime — no Python, no sklearn, 
 | Auth | Clerk | JWT + Convex integration, multi-provider (Google, GitHub, Email) |
 | AI | claude-sonnet-4-20250514 (Anthropic) | RAG-based Q&A, 200K token context, streaming, citations |
 | LAMINAR | Pure TypeScript (12 files) | TF-IDF, K-Means++, softmax, BFS graph traversal — zero ML deps |
+| Billing | Stripe | Recurring subscriptions, Checkout, webhooks, tier enforcement |
 | Hosting | Vercel + Convex Cloud | Edge functions, global CDN, managed backend |
 
 ---
@@ -141,8 +147,8 @@ Every stage is pure TypeScript in the Convex runtime — no Python, no sklearn, 
 ### Prerequisites
 
 - Node.js 18+
-- Accounts: [Convex](https://convex.dev), [Clerk](https://clerk.com), [Anthropic](https://anthropic.com)
-- For billing (Day 23+): [Stripe](https://stripe.com)
+- Accounts: [Convex](https://convex.dev), [Clerk](https://clerk.com), [Anthropic](https://anthropic.com), [Stripe](https://stripe.com)
+- Stripe CLI for local webhook testing: `scoop bucket add stripe https://github.com/stripe/scoop-stripe-cli && scoop install stripe`
 
 ### Installation
 
@@ -169,17 +175,19 @@ CLERK_JWT_ISSUER_DOMAIN=https://[your-app].clerk.accounts.dev
 # Anthropic (Claude API)
 ANTHROPIC_API_KEY=sk-ant-...
 
-# Stripe (add when billing is configured)
+# Stripe
 STRIPE_SECRET_KEY=sk_test_...
-STRIPE_PUBLISHABLE_KEY=pk_test_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_INDIVIDUAL=price_...
 STRIPE_PRICE_TEAM=price_...
+NEXT_PUBLIC_STRIPE_PRICE_INDIVIDUAL=price_...
+NEXT_PUBLIC_STRIPE_PRICE_TEAM=price_...
 ```
 
 ### Running Locally
 
-Start Convex first — it generates TypeScript types that Next.js depends on:
+Three terminals required when testing billing:
 
 ```bash
 # Terminal 1: Convex backend
@@ -187,9 +195,14 @@ npx convex dev
 
 # Terminal 2: Next.js frontend
 npm run dev
+
+# Terminal 3: Stripe webhook forwarding (billing only)
+stripe listen --forward-to localhost:3000/api/stripe/webhook
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+Use Stripe test card `4242 4242 4242 4242` with any future expiry and any CVC for checkout testing.
 
 ---
 
@@ -197,44 +210,49 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ```
 vela/
-├── app/
-│   ├── (auth)/
-│   │   ├── sign-in/[[...sign-in]]/page.tsx    public
-│   │   └── sign-up/[[...sign-up]]/page.tsx    public
-│   ├── (dashboard)/
-│   │   ├── layout.tsx                          navigation + footer
-│   │   ├── dashboard/page.tsx                  HELM — main dashboard
-│   │   ├── documents/page.tsx                  document list
-│   │   ├── documents/[id]/page.tsx             document detail + CURRENTS panel
-│   │   ├── documents/new/page.tsx              PORT — file upload
-│   │   ├── search/page.tsx                     COMPASS + LIGHTHOUSE
-│   │   ├── archipelagos/page.tsx               LAMINAR Stage 1 — cluster view
-│   │   ├── connections/page.tsx                LAMINAR Stage 3 — knowledge graph
-│   │   ├── cascade/page.tsx                    LAMINAR Stage 4 — butterfly effect
-│   │   └── wisdom/page.tsx                     LAMINAR Stage 5 — fractal wisdom
-│   ├── (marketing)/page.tsx                    public landing page
-│   ├── api/
-│   │   ├── stripe/checkout/route.ts            Stripe checkout session (Day 23)
-│   │   └── webhooks/stripe/route.ts            Stripe webhook handler (Day 23)
-│   ├── layout.tsx                              root layout
-│   └── globals.css                             VELA brand CSS variables
-│
-├── components/
-│   ├── ui/                                     Shadcn components (Radix primitives)
-│   ├── user-setup.tsx                          auto user creation on sign-in
-│   ├── document-card.tsx                       document list item
-│   ├── search-box.tsx                          search input
-│   ├── cascade-preview.tsx                     inline cascade warning on document edit
-│   ├── loading-wave.tsx                        reusable wave loading component
-│   └── laminar-summary-widget.tsx              LAMINAR preview card for HELM
+├── src/
+│   ├── app/
+│   │   ├── (auth)/
+│   │   │   ├── sign-in/[[...sign-in]]/page.tsx    public
+│   │   │   └── sign-up/[[...sign-up]]/page.tsx    public
+│   │   ├── (dashboard)/
+│   │   │   ├── layout.tsx                          navigation + footer
+│   │   │   ├── dashboard/page.tsx                  HELM — tier-aware dashboard
+│   │   │   ├── documents/page.tsx                  document list
+│   │   │   ├── documents/[id]/page.tsx             document detail + CURRENTS panel
+│   │   │   ├── documents/new/page.tsx              PORT — file upload
+│   │   │   ├── search/page.tsx                     COMPASS + LIGHTHOUSE
+│   │   │   ├── archipelagos/page.tsx               LAMINAR Stage 1 — cluster view
+│   │   │   ├── connections/page.tsx                LAMINAR Stage 3 — knowledge graph
+│   │   │   ├── cascade/page.tsx                    LAMINAR Stage 4 — butterfly effect
+│   │   │   ├── wisdom/page.tsx                     LAMINAR Stage 5 — fractal wisdom
+│   │   │   └── upgrade/page.tsx                    pricing + Stripe checkout
+│   │   ├── (marketing)/page.tsx                    public landing page
+│   │   ├── api/
+│   │   │   └── stripe/
+│   │   │       ├── checkout/route.ts               Stripe Checkout session handler
+│   │   │       └── webhook/route.ts                Stripe webhook — tier updates
+│   │   ├── layout.tsx                              root layout
+│   │   └── globals.css                             VELA brand CSS variables
+│   │
+│   └── components/
+│       ├── ui/                                     Shadcn components (Radix primitives)
+│       ├── user-setup.tsx                          auto user creation on sign-in
+│       ├── document-card.tsx                       document list item
+│       ├── search-box.tsx                          search input
+│       ├── cascade-preview.tsx                     inline cascade warning on document edit
+│       ├── loading-wave.tsx                        reusable wave loading component
+│       ├── laminar-summary-widget.tsx              LAMINAR summary card for paid HELM
+│       └── laminar-preview.tsx                     frosted-glass teaser for free tier
 │
 ├── convex/
 │   ├── schema.ts                               all tables + indexes
-│   ├── documents.ts                            PORT: upload, list, search, CRUD
+│   ├── documents.ts                            PORT: upload, list, search, CRUD + limit enforcement
 │   │                                           + getForLaminar bridge (Knowledge Domain boundary)
 │   ├── ai.ts                                   LIGHTHOUSE: Claude API (two modes, non-blocking)
-│   ├── users.ts                                user management + onboarding + billing fields
-│   ├── queries.ts                              AI query logging + analytics
+│   ├── users.ts                                user management + getSubscriptionTier fallback
+│   ├── subscriptions.ts                        getUserTier, updateUserTier, createCheckoutSession
+│   ├── queries.ts                              AI query logging + LAMINAR tier-gated queries
 │   ├── auth.config.ts                          Clerk JWT config
 │   └── laminar/
 │       ├── tfidf.ts          Pure TS -- TF-IDF vectorization (+ buildTFIDFFromSignals)
@@ -244,11 +262,14 @@ vela/
 │       ├── cooccurrence.ts   Pure TS -- co-occurrence matrix builder
 │       ├── pipeline.ts       Pure TS -- LaminarStage interface + runPipeline orchestrator
 │       ├── processors.ts     Pure TS -- IProcessable: MarkdownProcessor, PdfProcessor, PlaintextProcessor
-│       ├── engine.ts         Convex -- Stage 1 pipeline orchestration
-│       ├── graph.ts          Convex -- knowledge graph edge fusion
+│       ├── engine.ts         Convex -- Stage 1 pipeline orchestration (tier-gated)
+│       ├── graph.ts          Convex -- knowledge graph edge fusion (tier-gated)
 │       ├── runner.ts         Convex -- reactive pipeline entry point
-│       ├── cascade.ts        Convex -- Stage 4 BFS butterfly effect
-│       └── fractal.ts        Convex -- Stage 5 multi-scale patterns
+│       ├── cascade.ts        Convex -- Stage 4 BFS butterfly effect (tier-gated)
+│       └── fractal.ts        Convex -- Stage 5 multi-scale patterns (tier-gated)
+│
+├── convex/lib/
+│   └── tierGuard.ts          Pure TS -- canAccessLaminarLayer(), getLaminarPreviewMode()
 │
 ├── CLAUDE.md                                   AI coding agent rules + anti-patterns
 ├── .claude/vela-context.md                     current sprint state + session context
@@ -262,11 +283,11 @@ vela/
 
 ## Database Schema
 
-11 Convex tables across core features and LAMINAR stages. All field names below are verified against the deployed schema.
+12 Convex tables across core features, LAMINAR stages, and billing. All field names below are verified against the deployed schema.
 
 | Group | Table | Key Fields |
 |---|---|---|
-| Core | `users` | `clerkId`, `email`, `subscriptionTier`, `onboardingComplete` |
+| Core | `users` | `clerkId`, `email`, `name`, `subscription` (`free`/`pro`/`enterprise`), `stripeCustomerId`, `stripeSubscriptionId`, `currentPeriodEnd` |
 | | `documents` | `userId`, `contentPlain`, `status`, `type` |
 | | `queries` | AI query logging for analytics |
 | LAMINAR Stage 1 | `clusteringRuns` | `userId`, `status`, `startedAt`, `silhouetteScore` |
@@ -279,7 +300,7 @@ vela/
 | | `cascadeRuns` | `userId`, `sourceDocId`, `impactedCount`, `decay`, `threshold` |
 | | `cascadeImpacts` | `runId`, `documentId`, `impactScore`, `depth`, `path` |
 
-**Schema note:** Field names diverged from documentation during Day 18 development. The canonical truth is always the deployed `convex/schema.ts`. Key corrections: `probability` (not `membershipScore`), `name` (not `label`), `topKeywords` (not `topTerms`), `startedAt` (not `createdAt`), `knowledgeEdges` (not `edges`).
+**Tier mapping:** The `subscription` field uses internal values `"free"`, `"pro"`, `"enterprise"` which map to the marketing names Free, Individual ($15/mo), and Team ($25/user/mo) respectively. Field names diverged from documentation during Day 18 development — the canonical truth is always the deployed `convex/schema.ts`. Key corrections: `probability` (not `membershipScore`), `name` (not `label`), `topKeywords` (not `topTerms`), `startedAt` (not `createdAt`), `knowledgeEdges` (not `edges`).
 
 ---
 
@@ -291,7 +312,7 @@ vela/
 |---|---|---|
 | Deep Ocean Navy | `#1B3D5C` | Primary backgrounds, headings, body text |
 | Bright Teal | `#00BCD4` | Accents, interactive elements, CTAs, links |
-| LAMINAR Gradient | Navy to Teal | Progress bars, LAMINAR branding, premium features |
+| LAMINAR Gradient | Navy → Teal | Progress bars, LAMINAR branding, premium features |
 | Coral Accent | `#FF6B6B` | Error states and urgent alerts only |
 | Sunset Gold | `#F4B860` | Premium features and achievements only |
 
@@ -313,6 +334,7 @@ vela/
 | Loading State | NAVIGATING | Wave/pulse animation |
 | Empty State | STILL WATERS | "Ready for your first voyage" |
 | Error State | STORMY SEAS | "Trying again..." |
+| Doc limit hit | CARGO HOLD FULL | "Upgrade to carry more knowledge" |
 
 ### Design Principles
 
@@ -320,21 +342,34 @@ vela/
 - Nautical copy throughout — no "workflow," "optimize," "efficiency," "synergy"
 - Time-focused messaging — seconds saved, not features listed
 - Mobile-first responsive design across all features
+- Free-tier LAMINAR previews use real computed data with cosmetic blur — never placeholder text
+
+---
+
+## Pricing
+
+| Tier | Price | Documents | Queries | LAMINAR Access | Internal Value |
+|---|---|---|---|---|---|
+| Free | $0/month | 10 | 20/month | Blurred preview (real data) | `"free"` |
+| Individual | $15/month | 100 | Unlimited | ARCHIPELAGOS + CURRENTS full | `"pro"` |
+| Team | $25/user/month | Unlimited | Unlimited | All 5 stages full access | `"enterprise"` |
+
+Tier enforcement is applied at the Convex query layer via `tierGuard.ts` — not just the UI. Free users see real cluster names behind a cosmetic blur to demonstrate LAMINAR is actively working on their documents. Upgrades and downgrades take effect in real time via Stripe webhooks.
 
 ---
 
 ## Sprint Progress
 
 ```
-Phase 1: FOUNDATION (Days 1-5)        100% COMPLETE
-Phase 2: INFRASTRUCTURE (Days 6-8)    100% COMPLETE
-Phase 3: CORE FEATURES (Days 9-15)    100% COMPLETE
-Phase 4: DIFFERENTIATION (Days 16-20) 100% COMPLETE
-Phase 5: POLISH & BILLING (Days 21-25)  20% ACTIVE  <- NOW
-Phase 6: LAUNCH (Days 26-30)            0%  LOCKED
+Phase 1: FOUNDATION (Days 1-5)         100% COMPLETE
+Phase 2: INFRASTRUCTURE (Days 6-8)     100% COMPLETE
+Phase 3: CORE FEATURES (Days 9-15)     100% COMPLETE
+Phase 4: DIFFERENTIATION (Days 16-20)  100% COMPLETE
+Phase 5: POLISH & BILLING (Days 21-25)  60% ACTIVE   <- NOW
+Phase 6: LAUNCH (Days 26-30)             0% LOCKED
 ```
 
-**Day 21 of 30 — 67% Complete**
+**Day 23 of 30 — 77% Complete**
 
 ### Complete
 
@@ -350,12 +385,12 @@ Phase 6: LAUNCH (Days 26-30)            0%  LOCKED
 - [x] LAMINAR Stage 4 — CASCADE butterfly effect prediction (Day 19)
 - [x] LAMINAR Stage 5 — Fractal Wisdom multi-scale patterns (Day 20)
 - [x] SC2 Architecture Refactor — reactive pipeline, bounded context, composable stages (Day 20)
+- [x] HELM dashboard redesign — tier-aware LAMINAR integration, LoadingWave, LaminarSummaryWidget (Day 21)
+- [x] WCAG 2.1 AA accessibility + Lighthouse 90+ performance (Day 22)
+- [x] Stripe billing — 3-tier checkout, webhooks, real-time tier enforcement, document limits (Day 23)
 
 ### Active (Phase 5)
 
-- [ ] HELM dashboard redesign with LAMINAR integration (Day 21)
-- [ ] WCAG 2.1 AA accessibility + Lighthouse 90+ (Day 22)
-- [ ] Stripe billing — 3-tier checkout, webhooks, feature gating (Day 23)
 - [ ] MAIDEN VOYAGE onboarding flow + sample agency documents (Day 24)
 - [ ] Error boundaries + rate limiting + full regression test (Day 25)
 
@@ -366,18 +401,6 @@ Phase 6: LAUNCH (Days 26-30)            0%  LOCKED
 - [ ] Beta testing with 5-8 agency founders (Day 28)
 - [ ] Critical bug fixes + launch assets (Day 29)
 - [ ] Product Hunt + LinkedIn agency outreach (Day 30)
-
----
-
-## Pricing
-
-| Tier | Price | Documents | Queries | LAMINAR |
-|---|---|---|---|---|
-| Free | $0/month | 10 | 20/month | None |
-| Individual | $15/month | 100 | Unlimited | ARCHIPELAGOS (Stage 1) |
-| Team | $25/user/month | Unlimited | Unlimited | All 5 stages + team workspace |
-
-Feature gating is enforced at the Convex mutation layer — not just the UI. Stripe billing integration ships Day 23.
 
 ---
 
@@ -392,6 +415,7 @@ Feature gating is enforced at the Convex mutation layer — not just the UI. Str
 | Knowledge graph build (21 edges) | < 500ms |
 | Page load (first visit) | 1-2 seconds |
 | Page load (cached) | < 500ms |
+| Stripe webhook → tier update | < 2 seconds |
 
 ---
 
@@ -399,10 +423,11 @@ Feature gating is enforced at the Convex mutation layer — not just the UI. Str
 
 - **PDF extraction:** Status under verification — `pdf-parse` had module resolution issues in the Convex runtime during Phase 3; may have been resolved. Text and Markdown files work fully.
 - **No pagination:** Document list returns all documents. Needs pagination for 100+ docs (Month 2 roadmap).
-- **No test framework:** Validation is manual integration testing — no Jest or Vitest configured.
+- **No automated test framework:** Validation is manual integration testing — no Jest or Vitest configured.
 - **LAMINAR cold-start:** With fewer than 3 documents, clustering is skipped. With fewer than 10 documents and no usage history, behavioral and temporal signals are near-zero. Content similarity (0.60 weight) dominates appropriately at cold-start.
-- **O(n^2) graph scaling:** Knowledge graph edge computation is quadratic. Guarded at 200 documents; above that, partitions by cluster.
+- **O(n²) graph scaling:** Knowledge graph edge computation is quadratic. Guarded at 200 documents; above that, partitions by cluster.
 - **processors.ts not yet active in hot path:** `IProcessable` and `buildTFIDFFromSignals` are deployed infrastructure but `runner.ts` still uses the original `contentPlain` path. Activation deferred to Month 2 after usage data validates the improvement.
+- **No Customer Portal:** Subscription self-service (plan changes, cancellation) requires contacting support until the Stripe Customer Portal is wired up in Day 25.
 
 ---
 
@@ -420,7 +445,7 @@ Feature gating is enforced at the Convex mutation layer — not just the UI. Str
 
 ---
 
-**Last Updated:** March 2026 (Day 21)
-**Status:** Active Development — 67% Complete — Phase 5 Starting
-**Next Milestone:** Stripe billing live (Day 23)
-**Launch Countdown:** 9 days
+**Last Updated:** March 2026 (Day 23)
+**Status:** Active Development — 77% Complete — Phase 5 in progress
+**Next Milestone:** MAIDEN VOYAGE onboarding (Day 24)
+**Launch Countdown:** 7 days
