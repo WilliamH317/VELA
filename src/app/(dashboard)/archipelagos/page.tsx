@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Id } from "convex/_generated/dataModel";
+import LaminarPreview from "@/components/laminar-preview";
 
 // ============================================================================
 // MAIN PAGE COMPONENT
@@ -67,11 +68,30 @@ export default function ArchipelagosPage() {
     api.laminar.temporalRunner.runTemporalAnalysis,
   );
 
+  const userLimits = useQuery(
+    api.subscriptions.getUserLimits,
+    isAuthenticated ? {} : "skip",
+  );
+  const graphSummary = useQuery(
+    api.laminar.queries.getGraphSummary,
+    isAuthenticated ? {} : "skip",
+  );
+
   // Derived state
   const isRunning = isCharting || clusteringStatus?.status === "running";
   const isLoading =
     clusterData === undefined && clusteringStatus === undefined;
-  const hasData = clusterData && clusterData.clusters.length > 0;
+  const isPreview =
+    clusterData !== null &&
+    clusterData !== undefined &&
+    "preview" in clusterData &&
+    clusterData.preview === true;
+  const hasData =
+    clusterData &&
+    !isPreview &&
+    "clusters" in clusterData &&
+    (clusterData as { clusters?: unknown[] }).clusters !== undefined &&
+    (clusterData as { clusters: unknown[] }).clusters.length > 0;
   const hasTemporalData =
     temporalSummary !== null &&
     temporalSummary !== undefined &&
@@ -111,6 +131,22 @@ export default function ArchipelagosPage() {
     return (
       <PageShell>
         <WaveLoader />
+      </PageShell>
+    );
+  }
+
+  // ── Preview mode (free tier) ───────────────────────────────────────
+  if (isPreview && clusterData && "previewLabels" in clusterData) {
+    return (
+      <PageShell>
+        <PageHeader onRechart={handleRechart} isRunning={false} />
+        <LaminarPreview
+          clusterCount={clusterData.clusterCount}
+          channelCount={graphSummary?.edgeCount ?? 0}
+          previewLabels={clusterData.previewLabels}
+          documentCount={userLimits?.documentCount ?? 0}
+          documentLimit={userLimits?.documentLimit ?? 10}
+        />
       </PageShell>
     );
   }
@@ -194,7 +230,10 @@ export default function ArchipelagosPage() {
   }
 
   // ── Data — clusters ready ──────────────────────────────────────────
-  const { run, clusters } = clusterData;
+  // At this point, we know clusterData has 'clusters' (not preview/hidden)
+  const run = "run" in clusterData ? clusterData.run : undefined;
+  const clusters = "clusters" in clusterData ? clusterData.clusters : undefined;
+  if (!run || !clusters) return null;
 
   return (
     <PageShell>

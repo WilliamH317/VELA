@@ -15,6 +15,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import LoadingWave from "@/components/loading-wave";
 import LaminarSummaryWidget from "@/components/laminar-summary-widget";
+import LaminarPreview from "@/components/laminar-preview";
 import Link from "next/link";
 
 function formatTimeAgo(timestamp: number): string {
@@ -30,6 +31,8 @@ export default function DashboardPage() {
   const documents = useQuery(api.documents.list);
   const clusteringStatus = useQuery(api.laminar.queries.getClusteringStatus);
   const graphSummary = useQuery(api.laminar.queries.getGraphSummary);
+  const userLimits = useQuery(api.subscriptions.getUserLimits);
+  const clusterData = useQuery(api.laminar.queries.listClusters);
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
@@ -136,8 +139,40 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Zone C — LAMINAR Widget */}
-      <LaminarSummaryWidget />
+      {/* Zone C — LAMINAR Widget (tier-aware) */}
+      {userLimits === undefined || clusterData === undefined ? (
+        <LoadingWave message="Charting your knowledge currents..." />
+      ) : clusterData !== null &&
+        "preview" in clusterData &&
+        clusterData.preview === true ? (
+        <LaminarPreview
+          clusterCount={clusterData.clusterCount}
+          channelCount={graphSummary?.edgeCount ?? 0}
+          previewLabels={clusterData.previewLabels}
+          documentCount={userLimits.documentCount}
+          documentLimit={userLimits.documentLimit}
+        />
+      ) : (
+        <LaminarSummaryWidget />
+      )}
+
+      {/* Near-limit warning */}
+      {userLimits &&
+        userLimits.documentLimit !== Infinity &&
+        userLimits.documentCount >= userLimits.documentLimit - 2 &&
+        userLimits.documentCount < userLimits.documentLimit && (
+          <div className="rounded-xl border border-[#F4B860]/30 bg-[#F4B860]/5 px-5 py-3 flex items-center justify-between">
+            <p className="text-sm text-[#1B3D5C]">
+              Your cargo hold is nearly full — {userLimits.documentLimit - userLimits.documentCount} document{userLimits.documentLimit - userLimits.documentCount !== 1 ? "s" : ""} remaining
+            </p>
+            <Link
+              href="/upgrade"
+              className="text-sm font-medium text-[#00BCD4] hover:underline shrink-0 ml-4"
+            >
+              Upgrade →
+            </Link>
+          </div>
+        )}
 
       {/* Zone D — Recent CARGO */}
       <div>

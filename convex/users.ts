@@ -60,6 +60,26 @@ export const getByClerkId = query({
   },
 });
 
+/**
+ * Get the current user's subscription tier.
+ * Returns "free" as safe fallback if user not found or field absent.
+ * Used by LAMINAR tier gating and UI tier checks.
+ */
+export const getSubscriptionTier = query({
+  args: {},
+  handler: async (ctx): Promise<"free" | "pro" | "enterprise"> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return "free";
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .first();
+
+    return user?.subscription ?? "free";
+  },
+});
+
 // ─────────────────────────────────────────────
 // Mutations
 // ─────────────────────────────────────────────

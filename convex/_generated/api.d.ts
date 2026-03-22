@@ -23,8 +23,10 @@ import type * as laminar_runner from "../laminar/runner.js";
 import type * as laminar_temporal from "../laminar/temporal.js";
 import type * as laminar_temporalRunner from "../laminar/temporalRunner.js";
 import type * as laminar_tfidf from "../laminar/tfidf.js";
+import type * as lib_tierGuard from "../lib/tierGuard.js";
 import type * as migrations from "../migrations.js";
 import type * as queries from "../queries.js";
+import type * as subscriptions from "../subscriptions.js";
 import type * as users from "../users.js";
 
 import type {
@@ -49,8 +51,10 @@ declare const fullApi: ApiFromModules<{
   "laminar/temporal": typeof laminar_temporal;
   "laminar/temporalRunner": typeof laminar_temporalRunner;
   "laminar/tfidf": typeof laminar_tfidf;
+  "lib/tierGuard": typeof lib_tierGuard;
   migrations: typeof migrations;
   queries: typeof queries;
+  subscriptions: typeof subscriptions;
   users: typeof users;
 }>;
 

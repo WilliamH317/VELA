@@ -1,6 +1,6 @@
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
-import { Home, FileText, Upload, Search, Lightbulb, MapPin, GitBranch } from "lucide-react";
+import { Home, FileText, Upload, Search, Lightbulb, MapPin, GitBranch, Sparkles } from "lucide-react";
 import { Providers } from "@/components/providers";
 import { UserSetup } from "@/components/user-setup";
 
@@ -85,6 +85,14 @@ export default function DashboardLayout({
                 >
                   <GitBranch className="h-4 w-4" />
                   <span>CHARTS</span>
+                </Link>
+
+                <Link
+                  href="/upgrade"
+                  className="px-3 py-2 rounded-lg text-sm font-medium text-[#F4B860] hover:bg-[#F4B860]/10 transition-colors flex items-center gap-2"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <span>UPGRADE</span>
                 </Link>
               </div>
             </div>

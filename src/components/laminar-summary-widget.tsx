@@ -18,12 +18,18 @@ export default function LaminarSummaryWidget() {
     );
   }
 
-  // Empty / not completed state
+  // Empty / not completed state — also handle preview mode (shown separately via LaminarPreview)
+  const isFullData =
+    clusterData &&
+    !("preview" in clusterData) &&
+    !("hidden" in clusterData) &&
+    "clusters" in clusterData &&
+    Array.isArray((clusterData as { clusters?: unknown }).clusters);
+
   if (
     !clusteringStatus ||
     clusteringStatus.status !== "completed" ||
-    !clusterData ||
-    clusterData.clusters.length === 0
+    !isFullData
   ) {
     return (
       <div className="rounded-xl border border-[#1B3D5C]/10 bg-white p-6 min-h-[200px]">
@@ -66,7 +72,20 @@ export default function LaminarSummaryWidget() {
             label: "Chart aging",
           };
 
-  const topClusters = clusterData.clusters
+  // At this point, isFullData is true — clusterData has 'clusters' array
+  const allClusters =
+    clusterData && "clusters" in clusterData
+      ? (clusterData.clusters as Array<{
+          _id: string;
+          name: string;
+          description?: string;
+          documentCount: number;
+          topKeywords: string[];
+          coherenceScore: number;
+          color?: string;
+        }>)
+      : [];
+  const topClusters = [...allClusters]
     .sort((a, b) => b.documentCount - a.documentCount)
     .slice(0, 3);
 
@@ -81,8 +100,8 @@ export default function LaminarSummaryWidget() {
         <div>
           <h3 className="text-white font-semibold text-sm">ARCHIPELAGOS</h3>
           <p className="text-white/70 text-xs mt-0.5">
-            {clusterData.clusters.length} knowledge island
-            {clusterData.clusters.length === 1 ? "" : "s"} discovered
+            {allClusters.length} knowledge island
+            {allClusters.length === 1 ? "" : "s"} discovered
           </p>
         </div>
         <span

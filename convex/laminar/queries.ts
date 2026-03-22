@@ -14,6 +14,7 @@
 
 import { query } from "../_generated/server";
 import { v } from "convex/values";
+import { getLaminarPreviewMode } from "../lib/tierGuard";
 
 // ============================================================================
 // 1. listClusters
@@ -44,6 +45,36 @@ export const listClusters = query({
       .withIndex("by_run", (q) => q.eq("runId", latestRun._id))
       .collect();
 
+    // Tier gating: check ARCHIPELAGOS access level
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", userId))
+      .first();
+    const tier = user?.subscription ?? "free";
+    const mode = getLaminarPreviewMode(tier, "ARCHIPELAGOS");
+
+    if (mode === "hidden") {
+      return { hidden: true as const };
+    }
+
+    if (mode === "preview") {
+      // Return REAL computed data with preview flag — blur is cosmetic in UI
+      return {
+        preview: true as const,
+        clusterCount: clusters.length,
+        channelCount: 0, // Populated by graph summary in UI
+        previewLabels: clusters.slice(0, 3).map((c) => c.name),
+        run: {
+          _id: latestRun._id,
+          documentCount: latestRun.documentCount,
+          clusterCount: latestRun.clusterCount,
+          silhouetteScore: latestRun.silhouetteScore,
+          completedAt: latestRun.completedAt,
+        },
+      };
+    }
+
+    // Full access
     return {
       run: {
         _id: latestRun._id,
@@ -425,9 +456,17 @@ export const getTemporalSummary = query({
     if (!identity) return null;
     const userId = identity.subject;
 
+    // Tier gating: check CURRENTS access level
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", userId))
+      .first();
+    const tier = user?.subscription ?? "free";
+    const mode = getLaminarPreviewMode(tier, "CURRENTS");
+
+    if (mode === "hidden") return null;
+
     // Fetch all user's temporal patterns via user index.
-    // Counting by trend in-memory is efficient since a user typically has
-    // tens to low hundreds of documents — far cheaper than 4 index queries.
     const patterns = await ctx.db
       .query("temporalPatterns")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -436,6 +475,15 @@ export const getTemporalSummary = query({
     const counts = { rising: 0, stable: 0, declining: 0, periodic: 0 };
     for (const pattern of patterns) {
       counts[pattern.trend]++;
+    }
+
+    // Preview mode: return counts only (no document-level data)
+    if (mode === "preview") {
+      return {
+        ...counts,
+        totalAnalyzed: patterns.length,
+        preview: true as const,
+      };
     }
 
     return {
@@ -457,6 +505,15 @@ export const getDocumentConnections = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
     const userId = identity.subject;
+
+    // Tier gating: CHANNELS access
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", userId))
+      .first();
+    const tier = user?.subscription ?? "free";
+    const mode = getLaminarPreviewMode(tier, "CHANNELS");
+    if (mode === "hidden") return null;
 
     // Verify document belongs to user
     const doc = await ctx.db.get(args.documentId);
@@ -524,6 +581,17 @@ export const getBridgeDocuments = query({
     if (!identity) return null;
     const userId = identity.subject;
 
+    // Tier gating: CHANNELS access (bridges are part of the graph)
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", userId))
+      .first();
+    const channelMode = getLaminarPreviewMode(
+      user?.subscription ?? "free",
+      "CHANNELS",
+    );
+    if (channelMode === "hidden") return [];
+
     // Find latest completed run to scope memberships
     const latestRun = await ctx.db
       .query("clusteringRuns")
@@ -585,6 +653,17 @@ export const getAttractorStates = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
     const userId = identity.subject;
+
+    // Tier gating: CHANNELS access (attractors are part of the graph)
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", userId))
+      .first();
+    const channelMode = getLaminarPreviewMode(
+      user?.subscription ?? "free",
+      "CHANNELS",
+    );
+    if (channelMode === "hidden") return [];
 
     const edges = await ctx.db
       .query("knowledgeEdges")
@@ -663,6 +742,8 @@ export const getGraphSummary = query({
       if (edge.isBridge) bridgeCount++;
     }
 
+    // Graph summary counts are always visible (even free tier sees connection count in HELM).
+    // The detailed graph data (attractors, bridges) is gated separately.
     return {
       edgeCount: edges.length,
       documentCount: uniqueDocs.size,

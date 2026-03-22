@@ -158,6 +158,31 @@ export const create = mutation({
       throw new Error("Content too large (max 1MB)");
     }
 
+    // Document limit enforcement
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .first();
+    const tier = user?.subscription ?? "free";
+    const limits: Record<string, number> = {
+      free: 10,
+      pro: 100,
+      enterprise: Infinity,
+    };
+    const docLimit = limits[tier] ?? 10;
+
+    if (docLimit !== Infinity) {
+      const currentDocs = await ctx.db
+        .query("documents")
+        .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+        .collect();
+      if (currentDocs.length >= docLimit) {
+        throw new Error(
+          "Your cargo hold is full — upgrade your plan to carry more knowledge",
+        );
+      }
+    }
+
     // Duplicate detection
     const contentHash = generateSimpleHash(args.title + args.content);
 
@@ -267,10 +292,35 @@ export const createFromFile = mutation({
     }
 
     if (args.title.length === 0) {
-      throw new Error("⚠️ Document title cannot be empty");
+      throw new Error("Document title cannot be empty");
     }
     if (args.title.length > 500) {
-      throw new Error("⚠️ Document title too long (max 500 characters)");
+      throw new Error("Document title too long (max 500 characters)");
+    }
+
+    // Document limit enforcement
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .first();
+    const tier = user?.subscription ?? "free";
+    const fileLimits: Record<string, number> = {
+      free: 10,
+      pro: 100,
+      enterprise: Infinity,
+    };
+    const fileDocLimit = fileLimits[tier] ?? 10;
+
+    if (fileDocLimit !== Infinity) {
+      const currentDocs = await ctx.db
+        .query("documents")
+        .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+        .collect();
+      if (currentDocs.length >= fileDocLimit) {
+        throw new Error(
+          "Your cargo hold is full — upgrade your plan to carry more knowledge",
+        );
+      }
     }
 
     const mimeTypeMap: Record<string, string> = {

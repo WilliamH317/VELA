@@ -114,11 +114,16 @@ export default function ConnectionsPage() {
     api.laminar.queries.getAttractorStates,
     isAuthenticated ? {} : "skip",
   );
+  const userLimits = useQuery(
+    api.subscriptions.getUserLimits,
+    isAuthenticated ? {} : "skip",
+  );
 
   const buildGraph = useAction(api.laminar.graph.buildKnowledgeGraph);
 
   const isLoading = summary === undefined;
   const hasData = summary !== null && summary !== undefined && summary.edgeCount > 0;
+  const isFreeUser = userLimits?.tier === "free";
 
   const handleBuild = async () => {
     setIsBuilding(true);
@@ -138,6 +143,55 @@ export default function ConnectionsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <LoadingState message="Navigating your knowledge sea..." />
+      </div>
+    );
+  }
+
+  // ── Free tier: show count + upgrade prompt ──
+  if (isFreeUser) {
+    return (
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold text-[#1B3D5C] flex items-center gap-2">
+            <GitBranch className="h-6 w-6 text-[#00BCD4]" />
+            CHARTS — Knowledge Connections
+          </h1>
+          <p className="text-sm text-[#1B3D5C]/60 mt-1">
+            {summary?.edgeCount ?? 0} connections discovered across{" "}
+            {summary?.documentCount ?? 0} documents
+          </p>
+        </div>
+        <Card className="border-[#1B3D5C]/10">
+          <CardContent className="flex flex-col items-center py-16 text-center">
+            <svg
+              className="h-12 w-12 text-[#00BCD4]/30 mb-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+              />
+            </svg>
+            <h3 className="text-lg font-medium text-[#1B3D5C]/80 mb-2">
+              Upgrade your navigation charts
+            </h3>
+            <p className="text-sm text-[#1B3D5C]/50 max-w-md mb-6">
+              Your knowledge connections are being charted. Upgrade to Individual
+              or Team to explore bridge documents, attractor states, and the full
+              knowledge graph.
+            </p>
+            <Link
+              href="/upgrade"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-[#1B3D5C] to-[#00BCD4] text-white rounded-xl px-6 py-3 text-sm font-medium hover:shadow-lg hover:shadow-[#00BCD4]/20 transition-all"
+            >
+              Unlock CHARTS
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     );
   }
