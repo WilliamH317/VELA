@@ -26,6 +26,7 @@ import { internal } from "../_generated/api";
 import { v } from "convex/values";
 import { Id, Doc } from "../_generated/dataModel";
 import { buildVocabulary, computeTFIDF, cosineSimilarity } from "./tfidf";
+import Anthropic from "@anthropic-ai/sdk";
 
 // ============================================================================
 // TYPES
@@ -33,6 +34,7 @@ import { buildVocabulary, computeTFIDF, cosineSimilarity } from "./tfidf";
 
 interface SignalInputs {
   contentSimilarity: number | null;
+  embeddingSimilarity: number | null;
   structuralLink: number | null;
   coAccessStrength: number | null;
   temporalProximity: number | null;
@@ -42,6 +44,7 @@ interface FusionResult {
   weight: number;
   signals: {
     contentSimilarity: number;
+    embeddingSimilarity: number;
     temporalProximity: number;
     coAccessStrength: number;
     structuralLink: number;
@@ -66,6 +69,7 @@ interface EdgeRecord {
   weight: number;
   signals: {
     contentSimilarity: number;
+    embeddingSimilarity: number;
     temporalProximity: number;
     coAccessStrength: number;
     structuralLink: number;
@@ -78,6 +82,7 @@ interface GraphSummary {
   edgesCreated: number;
   signalAvailability: {
     contentSimilarity: boolean;
+    embeddingSimilarity: boolean;
     structuralLink: boolean;
     coAccessStrength: boolean;
     temporalProximity: boolean;
@@ -85,6 +90,7 @@ interface GraphSummary {
   avgWeight: number;
   bridgeDocumentCount: number;
   documentCount: number;
+  embeddingApiCalls: number;
 }
 
 // ============================================================================
@@ -114,10 +120,11 @@ const MAX_DOCUMENTS = 200;
  * Used to compute re-normalized weights when some signals are absent.
  */
 const IDEAL_WEIGHTS: Record<keyof SignalInputs, number> = {
-  contentSimilarity: 0.35,
-  structuralLink: 0.25,
+  contentSimilarity: 0.20,
+  embeddingSimilarity: 0.25,
+  structuralLink: 0.10,
   coAccessStrength: 0.25,
-  temporalProximity: 0.15,
+  temporalProximity: 0.20,
 };
 
 // ============================================================================
@@ -256,6 +263,7 @@ export function fuseSignals(inputs: SignalInputs): FusionResult {
       weight: 0,
       signals: {
         contentSimilarity: 0,
+        embeddingSimilarity: 0,
         temporalProximity: 0,
         coAccessStrength: 0,
         structuralLink: 0,
@@ -273,6 +281,7 @@ export function fuseSignals(inputs: SignalInputs): FusionResult {
   // Build output signals (0 for absent)
   const signals = {
     contentSimilarity: inputs.contentSimilarity ?? 0,
+    embeddingSimilarity: inputs.embeddingSimilarity ?? 0,
     temporalProximity: inputs.temporalProximity ?? 0,
     coAccessStrength: inputs.coAccessStrength ?? 0,
     structuralLink: inputs.structuralLink ?? 0,
@@ -403,6 +412,7 @@ export const insertEdgeBatch = internalMutation({
         weight: v.number(),
         signals: v.object({
           contentSimilarity: v.number(),
+          embeddingSimilarity: v.optional(v.number()),
           temporalProximity: v.number(),
           coAccessStrength: v.number(),
           structuralLink: v.number(),
@@ -453,6 +463,7 @@ export const buildKnowledgeGraph = action({
         edgesCreated: 0,
         signalAvailability: {
           contentSimilarity: false,
+          embeddingSimilarity: false,
           structuralLink: false,
           coAccessStrength: false,
           temporalProximity: false,
@@ -460,6 +471,7 @@ export const buildKnowledgeGraph = action({
         avgWeight: 0,
         bridgeDocumentCount: 0,
         documentCount: readyDocs.length,
+        embeddingApiCalls: 0,
       };
     }
 
@@ -509,13 +521,17 @@ export const buildKnowledgeGraph = action({
       { userId },
     );
 
-    const cooccurrenceMap = new Map<string, { count: number; strength: number }>();
+    const cooccurrenceMap = new Map<string, { count: number; strength: number; multiUserStrength: number }>();
     for (const c of rawCooccurrences) {
       const a = String(c.documentA);
       const b = String(c.documentB);
       // Canonical key: smaller ID first
       const key = a < b ? `${a}:${b}` : `${b}:${a}`;
-      cooccurrenceMap.set(key, { count: c.count, strength: c.strength });
+      cooccurrenceMap.set(key, {
+        count: c.count,
+        strength: c.strength,
+        multiUserStrength: c.multiUserStrength ?? 0,
+      });
     }
 
     // 2d. Temporal patterns → lookup by docId
@@ -535,15 +551,29 @@ export const buildKnowledgeGraph = action({
 
     // ── 3. SIGNAL AVAILABILITY ────────────────────────────────────────
 
+    // Initialize Claude API client for embedding similarity (Signal 5)
+    let anthropicClient: Anthropic | null = null;
+    try {
+      if (process.env.ANTHROPIC_API_KEY) {
+        anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      }
+    } catch {
+      console.log("[LAMINAR Graph] Claude API unavailable — embedding signal disabled");
+    }
+
     const signalAvailability = {
       contentSimilarity: true,
+      embeddingSimilarity: anthropicClient !== null,
       structuralLink: membershipsByDoc.size > 0,
       coAccessStrength: cooccurrenceMap.size > 0,
       temporalProximity: temporalMap.size > 0,
     };
 
+    let embeddingApiCalls = 0;
+
     console.log(
-      `[LAMINAR Graph] Signals: content=✓ structural=${signalAvailability.structuralLink ? "✓" : "✗"} ` +
+      `[LAMINAR Graph] Signals: content=✓ embedding=${signalAvailability.embeddingSimilarity ? "✓" : "✗"} ` +
+        `structural=${signalAvailability.structuralLink ? "✓" : "✗"} ` +
         `coAccess=${signalAvailability.coAccessStrength ? "✓" : "✗"} ` +
         `temporal=${signalAvailability.temporalProximity ? "✓" : "✗"}`,
     );
@@ -561,6 +591,82 @@ export const buildKnowledgeGraph = action({
     );
 
     // ── 5. BUILD EDGES ────────────────────────────────────────────────
+
+    // Pre-compute embedding similarities for eligible pairs via Claude API
+    // Only for pairs with contentSimilarity > 0.1 (cost control)
+    const embeddingCache = new Map<string, number>();
+
+    if (anthropicClient) {
+      // Collect pairs eligible for embedding
+      const eligiblePairs: Array<{ keyStr: string; textA: string; textB: string }> = [];
+
+      for (let i = 0; i < readyDocs.length; i++) {
+        for (let j = i + 1; j < readyDocs.length; j++) {
+          const contentSim = cosineSimilarity(tfidfMatrix[i]!, tfidfMatrix[j]!);
+          if (contentSim < 0.1) continue; // Skip pairs with low TF-IDF overlap
+
+          const keyStr = `${i}:${j}`;
+          const textA = readyDocs[i]!.contentPlain.slice(0, 500);
+          const textB = readyDocs[j]!.contentPlain.slice(0, 500);
+          eligiblePairs.push({ keyStr, textA, textB });
+        }
+      }
+
+      console.log(
+        `[LAMINAR Graph] Embedding: ${eligiblePairs.length} eligible pairs (contentSim > 0.1)`,
+      );
+
+      // Batch: process up to 10 pairs per Claude API call
+      for (let batch = 0; batch < eligiblePairs.length; batch += 10) {
+        const chunk = eligiblePairs.slice(batch, batch + 10);
+        const prompt = chunk
+          .map(
+            (p, idx) =>
+              `Pair ${idx + 1}:\nText A: ${p.textA}\nText B: ${p.textB}`,
+          )
+          .join("\n\n---\n\n");
+
+        try {
+          const response = await anthropicClient.messages.create({
+            model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-20250514",
+            max_tokens: 256,
+            messages: [
+              {
+                role: "user",
+                content: `Rate the semantic similarity between each pair of text excerpts on a scale from 0.0 to 1.0. Respond with ONLY a JSON array of numbers, one per pair. Example for 3 pairs: [0.72, 0.35, 0.91]\n\n${prompt}`,
+              },
+            ],
+          });
+
+          embeddingApiCalls++;
+
+          const text = response.content
+            .filter((b): b is Anthropic.TextBlock => b.type === "text")
+            .map((b) => b.text)
+            .join("");
+
+          // Parse JSON array of similarity scores
+          const match = text.match(/\[[\d.,\s]+\]/);
+          if (match) {
+            const scores: number[] = JSON.parse(match[0]);
+            for (let k = 0; k < Math.min(scores.length, chunk.length); k++) {
+              const score = Math.min(Math.max(scores[k] ?? 0, 0), 1);
+              embeddingCache.set(chunk[k]!.keyStr, score);
+            }
+          }
+        } catch (err) {
+          console.error(
+            `[LAMINAR Graph] Embedding API error (batch ${batch}):`,
+            err instanceof Error ? err.message : err,
+          );
+          // Fallback: pairs in this batch get no embedding signal
+        }
+      }
+
+      console.log(
+        `[LAMINAR Graph] Embedding: ${embeddingCache.size} scores cached, ${embeddingApiCalls} API calls`,
+      );
+    }
 
     const now = Date.now();
     const edgeCandidates: EdgeRecord[] = [];
@@ -587,15 +693,23 @@ export const buildKnowledgeGraph = action({
           continue;
         }
 
+        // Signal 5: embeddingSimilarity (from cache, computed above)
+        const embeddingKey = `${i}:${j}`;
+        const embeddingSim = embeddingCache.get(embeddingKey) ?? null;
+
         // Signal 2: structuralLink (cluster co-membership)
         const membA = membershipsByDoc.get(String(docAId));
         const membB = membershipsByDoc.get(String(docBId));
         const structuralLinkScore =
           membA && membB ? computeStructuralLink(membA, membB) : null;
 
-        // Signal 3: coAccessStrength
+        // Signal 3: coAccessStrength (blends per-user + multi-user signals)
         const cooc = cooccurrenceMap.get(pairKey);
-        const coAccessScore = cooc ? normalizeCoAccess(cooc.strength) : null;
+        const coAccessScore = cooc
+          ? normalizeCoAccess(
+              0.60 * cooc.strength + 0.40 * cooc.multiUserStrength,
+            )
+          : null;
 
         // Signal 4: temporalProximity
         const tempA = temporalMap.get(String(docAId)) ?? null;
@@ -604,9 +718,11 @@ export const buildKnowledgeGraph = action({
         const temporalInput =
           tempA && tempB ? temporalScore : null;
 
-        // Fuse signals
+        // Fuse signals (5-signal formula with dynamic weight renormalization)
         const result = fuseSignals({
           contentSimilarity: contentSim,
+          embeddingSimilarity:
+            signalAvailability.embeddingSimilarity ? embeddingSim : null,
           structuralLink:
             signalAvailability.structuralLink ? structuralLinkScore : null,
           coAccessStrength:
@@ -686,6 +802,7 @@ export const buildKnowledgeGraph = action({
       avgWeight,
       bridgeDocumentCount: bridgeCount,
       documentCount: readyDocs.length,
+      embeddingApiCalls,
     };
   },
 });

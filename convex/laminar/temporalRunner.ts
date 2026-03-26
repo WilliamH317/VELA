@@ -18,7 +18,11 @@ import {
 import { internal } from "../_generated/api";
 import { v } from "convex/values";
 import { Id } from "../_generated/dataModel";
-import { estimateAccessTrajectory } from "./temporal";
+import {
+  estimateAccessTrajectory,
+  computeAccessProbabilityCurve,
+  computeHurstExponent,
+} from "./temporal";
 import {
   buildCoOccurrenceFromSessions,
   normalizeCoOccurrences,
@@ -73,6 +77,12 @@ export const batchUpsertTemporalPatterns = internalMutation({
         ),
         periodicity: v.optional(v.number()),
         predictedRelevance: v.number(),
+        accessProbabilityCurve: v.optional(v.object({
+          day1: v.number(),
+          day7: v.number(),
+          day30: v.number(),
+        })),
+        hurstExponent: v.optional(v.number()),
         totalAccesses: v.number(),
       }),
     ),
@@ -96,6 +106,12 @@ export const batchUpsertTemporalPatterns = internalMutation({
           trend: pattern.trend,
           periodicity: pattern.periodicity,
           predictedRelevance: pattern.predictedRelevance,
+          ...(pattern.accessProbabilityCurve !== undefined
+            ? { accessProbabilityCurve: pattern.accessProbabilityCurve }
+            : {}),
+          ...(pattern.hurstExponent !== undefined
+            ? { hurstExponent: pattern.hurstExponent }
+            : {}),
           lastComputed: now,
           totalAccesses: pattern.totalAccesses,
         });
@@ -108,6 +124,12 @@ export const batchUpsertTemporalPatterns = internalMutation({
           trend: pattern.trend,
           ...(pattern.periodicity !== undefined ? { periodicity: pattern.periodicity } : {}),
           predictedRelevance: pattern.predictedRelevance,
+          ...(pattern.accessProbabilityCurve !== undefined
+            ? { accessProbabilityCurve: pattern.accessProbabilityCurve }
+            : {}),
+          ...(pattern.hurstExponent !== undefined
+            ? { hurstExponent: pattern.hurstExponent }
+            : {}),
           lastComputed: now,
           totalAccesses: pattern.totalAccesses,
         });
@@ -236,6 +258,13 @@ export const runTemporalAnalysis = action({
 
       for (const [docId, timestamps] of docTimestamps) {
         const trajectory = estimateAccessTrajectory(timestamps, now);
+        const curve = computeAccessProbabilityCurve(timestamps, now);
+        const hurst = computeHurstExponent(timestamps, now);
+
+        // Only include curve if it has meaningful data (>= 3 accesses)
+        const hasCurve = curve.day1 > 0 || curve.day7 > 0 || curve.day30 > 0;
+        // Only include Hurst if confidence > 0 (>= 4 access events)
+        const hasHurst = hurst.confidence > 0;
 
         patterns.push({
           userId,
@@ -248,6 +277,8 @@ export const runTemporalAnalysis = action({
             ? { periodicity: trajectory.periodicity }
             : {}),
           predictedRelevance: trajectory.predictedRelevance,
+          ...(hasCurve ? { accessProbabilityCurve: curve } : {}),
+          ...(hasHurst ? { hurstExponent: hurst.H } : {}),
           totalAccesses: timestamps.length,
         });
       }

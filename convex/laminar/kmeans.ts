@@ -449,3 +449,89 @@ export function suggestK(vectors: Vector[], seed: number = 42): number {
 
   return bestK;
 }
+
+// ---------------------------------------------------------------------------
+// Adaptive K selection via Bayesian Information Criterion (BIC)
+// ---------------------------------------------------------------------------
+
+/**
+ * Select the optimal number of clusters using BIC minimization.
+ *
+ * For each K from 2 to kMax, runs K-Means and computes BIC:
+ *   BIC = -2 * log_likelihood + p * ln(n)
+ * where log_likelihood approximates cluster compactness via
+ * sum of squared distances, and p = K * D (free parameters).
+ *
+ * BIC penalizes model complexity — higher K costs more. Selects
+ * the K that minimizes BIC (best balance of fit vs. complexity).
+ *
+ * Falls back to suggestK heuristic if BIC produces K=1 (degenerate).
+ *
+ * @param vectors - Data points, shape [N][D].
+ * @param kMax    - Maximum K to evaluate (default: min(10, floor(n/2))).
+ * @param seed    - Optional PRNG seed for deterministic K-Means runs.
+ * @returns The optimal K and BIC scores for all evaluated K values.
+ */
+export function selectOptimalK(
+  vectors: Vector[],
+  kMax: number,
+  seed: number = 42,
+): { optimalK: number; bicScores: Array<{ k: number; bic: number }> } {
+  const n = vectors.length;
+  if (n < 4) {
+    return { optimalK: 2, bicScores: [{ k: 2, bic: 0 }] };
+  }
+
+  const dim = vectors[0]?.length ?? 1;
+  const effectiveKMax = Math.min(kMax, Math.floor(n / 2), 10);
+  const minK = 2;
+
+  if (effectiveKMax < minK) {
+    return { optimalK: 2, bicScores: [{ k: 2, bic: 0 }] };
+  }
+
+  const bicScores: Array<{ k: number; bic: number }> = [];
+  let bestK = minK;
+  let bestBIC = Infinity;
+
+  for (let k = minK; k <= effectiveKMax; k++) {
+    const { labels, centroids } = kMeansCluster(vectors, k, 20, seed);
+
+    // Compute within-cluster sum of squared distances (WCSS)
+    let wcss = 0;
+    for (let i = 0; i < n; i++) {
+      const label = labels[i]!;
+      const centroid = centroids[label]!;
+      const vec = vectors[i]!;
+      for (let d = 0; d < dim; d++) {
+        const diff = vec[d]! - centroid[d]!;
+        wcss += diff * diff;
+      }
+    }
+
+    // Log-likelihood approximation: -n/2 * ln(WCSS/n)
+    // Avoid log(0) for degenerate cases
+    const variance = Math.max(wcss / n, 1e-10);
+    const logLikelihood = -n / 2 * Math.log(variance);
+
+    // Free parameters: K centroids × D dimensions
+    const p = k * dim;
+
+    // BIC = -2 * logL + p * ln(n)
+    const bic = -2 * logLikelihood + p * Math.log(n);
+
+    bicScores.push({ k, bic });
+
+    if (bic < bestBIC) {
+      bestBIC = bic;
+      bestK = k;
+    }
+  }
+
+  // Fallback: if BIC selects K=1 or degenerate, use silhouette heuristic
+  if (bestK < 2) {
+    bestK = suggestK(vectors, seed);
+  }
+
+  return { optimalK: bestK, bicScores };
+}

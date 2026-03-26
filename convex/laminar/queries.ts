@@ -756,3 +756,67 @@ export const getGraphSummary = query({
     };
   },
 });
+
+// ============================================================================
+// 13. getCascadeImpacts
+//     Returns impacts from a specific cascade run, hydrated with doc titles.
+// ============================================================================
+
+export const getCascadeImpacts = query({
+  args: { runId: v.id("cascadeRuns") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const userId = identity.subject;
+
+    // Verify run belongs to user
+    const run = await ctx.db.get(args.runId);
+    if (!run || run.userId !== userId) return null;
+
+    const impacts = await ctx.db
+      .query("cascadeImpacts")
+      .withIndex("by_run", (q) => q.eq("runId", args.runId))
+      .collect();
+
+    // Hydrate with document titles
+    const hydrated = await Promise.all(
+      impacts.map(async (impact) => {
+        const doc = await ctx.db.get(impact.documentId);
+        return {
+          documentId: impact.documentId,
+          title: doc?.title ?? "Unknown document",
+          impactScore: impact.impactScore,
+          depth: impact.depth,
+          direction: impact.direction ?? "forward",
+          confidenceLow: impact.confidenceLow,
+          confidenceHigh: impact.confidenceHigh,
+          pathDescription: impact.pathDescription,
+        };
+      }),
+    );
+
+    return hydrated.sort((a, b) => b.impactScore - a.impactScore);
+  },
+});
+
+// ============================================================================
+// 14. getLatestCascadeRun
+//     Returns the most recent cascade run for a given source document.
+// ============================================================================
+
+export const getLatestCascadeRun = query({
+  args: { sourceDocId: v.id("documents") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const userId = identity.subject;
+
+    return ctx.db
+      .query("cascadeRuns")
+      .withIndex("by_source", (q) =>
+        q.eq("userId", userId).eq("sourceDocId", args.sourceDocId),
+      )
+      .order("desc")
+      .first();
+  },
+});

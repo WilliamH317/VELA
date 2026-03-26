@@ -13,7 +13,7 @@
  */
 
 import { internalMutation, internalAction } from "../_generated/server";
-import { internal, api } from "../_generated/api";
+import { internal } from "../_generated/api";
 import { v } from "convex/values";
 
 // ============================================================================
@@ -71,10 +71,10 @@ export const triggerClustering = internalAction({
   handler: async (ctx, { userId }): Promise<void> => {
     console.log(`[LAMINAR] Reactive clustering triggered for user ${userId}`);
 
-    // Delegate to the existing clustering pipeline.
-    // engine.run uses auth from the scheduler chain.
+    // Delegate to internal clustering pipeline (no auth context in scheduler).
+    // userId passed explicitly — never derived from ctx.auth in scheduled actions.
     try {
-      await ctx.runAction(api.laminar.engine.run, {});
+      await ctx.runAction(internal.laminar.engine.internalRun, { userId });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
       console.error(`[LAMINAR] Reactive clustering failed: ${message}`);

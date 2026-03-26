@@ -12,14 +12,16 @@
 
 import {
   action,
+  internalAction,
   internalMutation,
+  internalQuery,
 } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { v } from "convex/values";
 import { Doc, Id } from "../_generated/dataModel";
 import { buildVocabulary, computeTFIDF } from "./tfidf";
-import { kMeansCluster, suggestK, calculateSilhouette } from "./kmeans";
-import { computeDocumentConfidence } from "./confidence";
+import { kMeansCluster, calculateSilhouette, selectOptimalK, assignClusters } from "./kmeans";
+import { computeDocumentConfidence, silhouetteToStabilityConfidence } from "./confidence";
 
 // ============================================================================
 // CONSTANTS
@@ -33,6 +35,7 @@ const CLUSTER_COLORS = [
 const MIN_DOCUMENTS = 3;
 const TOP_KEYWORDS_COUNT = 5;
 const NAME_KEYWORDS_COUNT = 3;
+const DRIFT_THRESHOLD = 0.05;
 
 // ============================================================================
 // HELPERS (pure functions — no Convex context)
@@ -192,6 +195,7 @@ export const insertCluster = internalMutation({
     topKeywords: v.array(v.string()),
     centroid: v.array(v.number()),
     coherenceScore: v.number(),
+    stabilityConfidence: v.optional(v.number()),
     color: v.string(),
     createdAt: v.number(),
   },
@@ -204,6 +208,9 @@ export const insertCluster = internalMutation({
       topKeywords: args.topKeywords,
       centroid: args.centroid,
       coherenceScore: args.coherenceScore,
+      ...(args.stabilityConfidence !== undefined
+        ? { stabilityConfidence: args.stabilityConfidence }
+        : {}),
       color: args.color,
       createdAt: args.createdAt,
     });
@@ -252,7 +259,81 @@ export const batchInsertHistory = internalMutation({
   },
 });
 
-// // ============================================================================
+// ============================================================================
+// INTERNAL QUERIES — for incremental clustering drift detection
+// ============================================================================
+
+/**
+ * Fetch the latest completed run's clusters for a user.
+ * Used to detect centroid drift before deciding whether to run full K-Means.
+ */
+export const getExistingClusters = internalQuery({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    // Find latest completed run
+    const latestRun = await ctx.db
+      .query("clusteringRuns")
+      .withIndex("by_user_status", (q) =>
+        q.eq("userId", args.userId).eq("status", "completed"),
+      )
+      .order("desc")
+      .first();
+
+    if (!latestRun) return null;
+
+    const clusters = await ctx.db
+      .query("clusters")
+      .withIndex("by_run", (q) => q.eq("runId", latestRun._id))
+      .collect();
+
+    return {
+      runId: latestRun._id,
+      clusters: clusters.map((c) => ({
+        _id: c._id,
+        centroid: c.centroid,
+        documentCount: c.documentCount,
+      })),
+    };
+  },
+});
+
+/**
+ * Fetch existing memberships for a set of document IDs in a given run.
+ * Used by incremental mode to identify which documents already have assignments.
+ */
+export const getMembershipsForDocIds = internalQuery({
+  args: {
+    runId: v.id("clusteringRuns"),
+    documentIds: v.array(v.id("documents")),
+  },
+  handler: async (ctx, args) => {
+    const memberships = await ctx.db
+      .query("clusterMemberships")
+      .withIndex("by_run", (q) => q.eq("runId", args.runId))
+      .collect();
+
+    const docIdSet = new Set(args.documentIds.map(String));
+    return memberships.filter((m) => docIdSet.has(String(m.documentId)));
+  },
+});
+
+/**
+ * Increment documentCount on an existing cluster (used by incremental mode).
+ */
+export const incrementClusterDocCount = internalMutation({
+  args: {
+    clusterId: v.id("clusters"),
+  },
+  handler: async (ctx, args): Promise<void> => {
+    const cluster = await ctx.db.get(args.clusterId);
+    if (!cluster) return;
+    await ctx.db.patch(args.clusterId, {
+      documentCount: cluster.documentCount + 1,
+    });
+  },
+});
+
+// ============================================================================
 // RETURN TYPE (explicit to break circular inference with internal mutations)
 // ============================================================================
 
@@ -272,15 +353,30 @@ interface ClusteringSummary {
 // MAIN ACTION — LAMINAR clustering pipeline
 // ============================================================================
 
+/**
+ * Public action — called from client UI (requires auth context).
+ * Delegates to internalRun with userId from identity.
+ */
 export const run = action({
   args: {},
   handler: async (ctx): Promise<ClusteringSummary> => {
-    // ── 1. Authentication ──────────────────────────────────────────────
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    const userId = identity.subject;
+    return ctx.runAction(internal.laminar.engine.internalRun, {
+      userId: identity.subject,
+    });
+  },
+});
+
+/**
+ * Internal action — called from scheduler (no auth context).
+ * Accepts userId as an explicit argument.
+ */
+export const internalRun = internalAction({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }): Promise<ClusteringSummary> => {
     const startTime = Date.now();
 
     // ── 2. Create clustering run (status: "running") ───────────────────
@@ -330,10 +426,190 @@ export const run = action({
         `[LAMINAR] TF-IDF complete: ${vocabulary.length} terms, ${tfidfMatrix.length} vectors`,
       );
 
-      // ── 7. Determine optimal K ──────────────────────────────────────
-      const k = suggestK(tfidfMatrix);
+      // ── 6b. Incremental clustering drift check ────────────────────
+      const existingClusters = await ctx.runQuery(
+        internal.laminar.engine.getExistingClusters,
+        { userId },
+      );
 
-      console.log(`[LAMINAR] Suggested K = ${k}`);
+      if (existingClusters && existingClusters.clusters.length > 0) {
+        // Assign all docs to nearest existing centroid
+        const existingCentroids = existingClusters.clusters.map((c) => c.centroid);
+        const assignments = assignClusters(tfidfMatrix, existingCentroids);
+
+        // Compute updated centroids from new assignments
+        const k0 = existingCentroids.length;
+        const dim = tfidfMatrix[0]?.length ?? 0;
+        const sums = Array.from({ length: k0 }, () => new Array<number>(dim).fill(0));
+        const counts = new Array<number>(k0).fill(0);
+
+        for (let i = 0; i < tfidfMatrix.length; i++) {
+          const c = assignments[i]!;
+          counts[c]!++;
+          for (let d = 0; d < dim; d++) {
+            sums[c]![d]! += tfidfMatrix[i]![d]!;
+          }
+        }
+
+        // Mean drift across all clusters
+        let totalDrift = 0;
+        let clusterCount = 0;
+        for (let c = 0; c < k0; c++) {
+          if (counts[c]! === 0) continue;
+          const newCentroid = sums[c]!.map((s) => s / counts[c]!);
+          let dist = 0;
+          for (let d = 0; d < dim; d++) {
+            const diff = newCentroid[d]! - existingCentroids[c]![d]!;
+            dist += diff * diff;
+          }
+          totalDrift += Math.sqrt(dist);
+          clusterCount++;
+        }
+
+        const meanDrift = clusterCount > 0 ? totalDrift / clusterCount : 0;
+
+        if (meanDrift < DRIFT_THRESHOLD) {
+          console.log(
+            `[LAMINAR] Incremental mode: drift ${meanDrift.toFixed(4)} < threshold ${DRIFT_THRESHOLD} — skipping full recompute`,
+          );
+
+          // Find documents that need membership assignment for this run.
+          // Fetch existing memberships for the previous run to identify unassigned docs.
+          const prevRunId = existingClusters.runId;
+          const existingMemberships = await ctx.runQuery(
+            internal.laminar.engine.getMembershipsForDocIds,
+            { runId: prevRunId, documentIds: docIds },
+          );
+          const assignedDocIds = new Set(
+            existingMemberships.map((m: { documentId: string }) => String(m.documentId)),
+          );
+
+          // Identify unassigned documents (new uploads since last full K-Means)
+          const unassignedIndices: number[] = [];
+          for (let i = 0; i < readyDocs.length; i++) {
+            if (!assignedDocIds.has(String(docIds[i]!))) {
+              unassignedIndices.push(i);
+            }
+          }
+
+          console.log(
+            `[LAMINAR] Incremental: ${unassignedIndices.length} unassigned documents to assign`,
+          );
+
+          // Compute soft membership for each unassigned document
+          const clusterIdList = existingClusters.clusters.map((c) => c._id);
+          const clusterIdStrings = clusterIdList.map((id) => id as string);
+          const now = Date.now();
+          const newMemberships: Array<{
+            userId: string;
+            documentId: Id<"documents">;
+            clusterId: Id<"clusters">;
+            runId: Id<"clusteringRuns">;
+            probability: number;
+            isPrimary: boolean;
+            isAmbiguous: boolean;
+            assignedAt: number;
+          }> = [];
+
+          // Track which clusters gain new documents
+          const clusterDocIncrements = new Map<string, number>();
+
+          for (const idx of unassignedIndices) {
+            const confidence = computeDocumentConfidence(
+              tfidfMatrix[idx]!,
+              existingCentroids,
+              clusterIdStrings,
+            );
+
+            for (const membership of confidence.memberships) {
+              const clusterIdx = clusterIdStrings.indexOf(membership.clusterId);
+              if (clusterIdx < 0) continue;
+
+              const isPrimary = membership.clusterId === confidence.primaryCluster;
+
+              newMemberships.push({
+                userId,
+                documentId: docIds[idx]!,
+                clusterId: clusterIdList[clusterIdx]!,
+                runId: prevRunId,
+                probability: membership.probability,
+                isPrimary,
+                isAmbiguous: confidence.isAmbiguous,
+                assignedAt: now,
+              });
+
+              // Count primary assignments per cluster for documentCount update
+              if (isPrimary) {
+                const cid = String(clusterIdList[clusterIdx]!);
+                clusterDocIncrements.set(cid, (clusterDocIncrements.get(cid) ?? 0) + 1);
+              }
+            }
+          }
+
+          // Batch insert memberships (25-item limit)
+          for (let i = 0; i < newMemberships.length; i += 25) {
+            const batch = newMemberships.slice(i, i + 25);
+            await ctx.runMutation(internal.laminar.engine.batchInsertMemberships, {
+              memberships: batch,
+            });
+          }
+
+          // Increment documentCount on clusters that gained new primary members
+          for (const [clusterId] of clusterDocIncrements) {
+            const increment = clusterDocIncrements.get(clusterId)!;
+            for (let n = 0; n < increment; n++) {
+              await ctx.runMutation(internal.laminar.engine.incrementClusterDocCount, {
+                clusterId: clusterId as Id<"clusters">,
+              });
+            }
+          }
+
+          console.log(
+            `[LAMINAR] Incremental: ${newMemberships.length} memberships inserted, ` +
+              `${clusterDocIncrements.size} clusters updated`,
+          );
+
+          // Complete the run
+          const silhouetteScore = calculateSilhouette(tfidfMatrix, assignments);
+          await ctx.runMutation(internal.laminar.engine.completeRun, {
+            runId,
+            documentCount: readyDocs.length,
+            clusterCount: k0,
+            silhouetteScore,
+            completedAt: Date.now(),
+          });
+
+          const elapsedMs = Date.now() - startTime;
+          console.log(
+            `[LAMINAR] Incremental clustering complete in ${elapsedMs}ms — ` +
+              `${unassignedIndices.length} new docs assigned, drift below threshold`,
+          );
+
+          return {
+            runId,
+            clusterCount: k0,
+            silhouetteScore,
+            clusters: existingClusters.clusters.map((c) => ({
+              name: "",
+              documentCount: c.documentCount + (clusterDocIncrements.get(String(c._id)) ?? 0),
+              topKeywords: [],
+              coherenceScore: 0,
+            })),
+          };
+        }
+
+        console.log(
+          `[LAMINAR] Drift ${meanDrift.toFixed(4)} >= threshold ${DRIFT_THRESHOLD} — running full recompute`,
+        );
+      }
+
+      // ── 7. Determine optimal K (BIC-based, with silhouette fallback) ─
+      const kMax = Math.min(10, Math.floor(readyDocs.length / 2));
+      const { optimalK: k, bicScores } = selectOptimalK(tfidfMatrix, kMax);
+
+      console.log(
+        `[LAMINAR] BIC K selection: optimal K = ${k} (evaluated K=2..${kMax}, ${bicScores.length} scores)`,
+      );
 
       // ── 8. K-Means clustering ───────────────────────────────────────
       const { labels, centroids, iterations, converged } = kMeansCluster(
@@ -350,6 +626,13 @@ export const run = action({
 
       console.log(
         `[LAMINAR] Silhouette score: ${silhouetteScore.toFixed(4)}`,
+      );
+
+      // ── 8b. Stability confidence from silhouette score ─────────────
+      const stability = silhouetteToStabilityConfidence(silhouetteScore);
+
+      console.log(
+        `[LAMINAR] Stability: ${stability.label} (confidence: ${stability.confidence})`,
       );
 
       // ── 9. (computed below after cluster IDs are available) ─────────
@@ -401,6 +684,7 @@ export const run = action({
             topKeywords: clusterKeywords[c]!,
             centroid: Array.from(centroids[c]!),
             coherenceScore: coherenceScores[c]!,
+            stabilityConfidence: stability.confidence,
             color: CLUSTER_COLORS[c % CLUSTER_COLORS.length]!,
             createdAt: now,
           },

@@ -278,3 +278,38 @@ function euclideanDistance(a: number[], b: number[]): number {
   }
   return Math.sqrt(sum);
 }
+
+// ============================================================================
+// STABILITY CONFIDENCE — maps silhouette score to human-readable stability
+// ============================================================================
+
+/**
+ * Map raw silhouette score to a stability confidence value and label.
+ *
+ * Silhouette range: -1 to +1 (current VELA baseline: ~0.1531)
+ * Output confidence range: 0 to 1
+ *
+ * Mapping calibrated against VELA's observed clustering behavior:
+ *   >= 0.70  →  0.95  "Highly stable"
+ *   >= 0.50  →  0.80  "Stable"
+ *   >= 0.30  →  0.65  "Forming"
+ *   >= 0.15  →  0.50  "Still forming"  ← current baseline
+ *   <  0.15  →  0.30  "Unstable — reorganizing"
+ */
+export function silhouetteToStabilityConfidence(
+  silhouetteScore: number,
+): { confidence: number; label: string } {
+  if (silhouetteScore >= 0.70) {
+    return { confidence: 0.95, label: "Highly stable" };
+  }
+  if (silhouetteScore >= 0.50) {
+    return { confidence: 0.80, label: "Stable" };
+  }
+  if (silhouetteScore >= 0.30) {
+    return { confidence: 0.65, label: "Forming" };
+  }
+  if (silhouetteScore >= 0.15) {
+    return { confidence: 0.50, label: "Still forming" };
+  }
+  return { confidence: 0.30, label: "Unstable — reorganizing" };
+}

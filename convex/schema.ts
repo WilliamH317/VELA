@@ -209,6 +209,7 @@ export default defineSchema({
     topKeywords: v.array(v.string()),
     centroid: v.array(v.number()), // TF-IDF centroid vector
     coherenceScore: v.number(), // Per-cluster silhouette
+    stabilityConfidence: v.optional(v.number()), // Derived from silhouette score, range 0–1
     color: v.optional(v.string()), // UI visualization
     createdAt: v.number(),
   })
@@ -286,6 +287,12 @@ export default defineSchema({
     ),
     periodicity: v.optional(v.number()), // Days between peaks
     predictedRelevance: v.number(), // 0-1 score for T+7
+    accessProbabilityCurve: v.optional(v.object({ // Predictive access horizons
+      day1: v.number(),  // P(accessed | t+1 day)
+      day7: v.number(),  // P(accessed | t+7 days)
+      day30: v.number(), // P(accessed | t+30 days)
+    })),
+    hurstExponent: v.optional(v.number()), // R/S analysis result, range 0–1
     lastComputed: v.number(),
     totalAccesses: v.number(),
   })
@@ -302,6 +309,7 @@ export default defineSchema({
     count: v.number(), // Sessions they co-occurred in
     lastSeen: v.number(),
     strength: v.number(), // Normalized 0-1
+    multiUserStrength: v.optional(v.number()), // Cross-user co-access score, range 0–1
   })
     .index("by_user", ["userId"])
     .index("by_document_a", ["userId", "documentA"])
@@ -327,6 +335,7 @@ export default defineSchema({
     // Per-signal breakdown (for adaptive weighting)
     signals: v.object({
       contentSimilarity: v.number(), // TF-IDF cosine similarity
+      embeddingSimilarity: v.optional(v.number()), // Signal 5 via Claude API, range 0–1
       temporalProximity: v.number(), // Access time correlation
       coAccessStrength: v.number(), // From cooccurrences table
       structuralLink: v.number(), // Shared clusters, tags, etc.
@@ -372,6 +381,9 @@ export default defineSchema({
     documentId: v.id("documents"), // Affected document
     impactScore: v.number(), // 0-1 propagated impact
     depth: v.number(), // Hops from source document
+    direction: v.optional(v.union(v.literal("forward"), v.literal("reverse"))), // Bidirectional CASCADE
+    confidenceLow: v.optional(v.number()),  // 5th percentile from bootstrap CI
+    confidenceHigh: v.optional(v.number()), // 95th percentile from bootstrap CI
     pathDescription: v.optional(v.string()), // Human-readable path
   })
     .index("by_run", ["runId"])

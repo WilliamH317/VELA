@@ -11,9 +11,11 @@
 import type * as ai from "../ai.js";
 import type * as documents from "../documents.js";
 import type * as laminar_access from "../laminar/access.js";
+import type * as laminar_cascade from "../laminar/cascade.js";
 import type * as laminar_confidence from "../laminar/confidence.js";
 import type * as laminar_cooccurrence from "../laminar/cooccurrence.js";
 import type * as laminar_engine from "../laminar/engine.js";
+import type * as laminar_fractal from "../laminar/fractal.js";
 import type * as laminar_graph from "../laminar/graph.js";
 import type * as laminar_kmeans from "../laminar/kmeans.js";
 import type * as laminar_pipeline from "../laminar/pipeline.js";
@@ -39,9 +41,11 @@ declare const fullApi: ApiFromModules<{
   ai: typeof ai;
   documents: typeof documents;
   "laminar/access": typeof laminar_access;
+  "laminar/cascade": typeof laminar_cascade;
   "laminar/confidence": typeof laminar_confidence;
   "laminar/cooccurrence": typeof laminar_cooccurrence;
   "laminar/engine": typeof laminar_engine;
+  "laminar/fractal": typeof laminar_fractal;
   "laminar/graph": typeof laminar_graph;
   "laminar/kmeans": typeof laminar_kmeans;
   "laminar/pipeline": typeof laminar_pipeline;

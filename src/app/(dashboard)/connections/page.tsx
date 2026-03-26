@@ -265,6 +265,9 @@ export default function ConnectionsPage() {
                 {buildResult.signalAvailability.contentSimilarity && (
                   <span title="Content">📐</span>
                 )}
+                {buildResult.signalAvailability.embeddingSimilarity && (
+                  <span title="Semantic">🧠</span>
+                )}
                 {buildResult.signalAvailability.structuralLink && (
                   <span title="Clusters">🏝️</span>
                 )}

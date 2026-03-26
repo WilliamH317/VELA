@@ -7,7 +7,29 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(npx convex:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(cd:*)",
+      "Bash(npx lighthouse:*)",
+      "Bash(curl:*)",
+      "Bash(node:*)",
+      "Bash(kill 267)",
+      "Bash(kill 231)",
+      "Bash(lsof -ti:3001)",
+      "Bash(xargs kill:*)",
+      "Bash(/dev/null mv:*)",
+      "Bash(lsof:*)",
+      "Bash(kill 885)",
+      "Bash(kill -9 37508)",
+      "Bash(kill -9 852)",
+      "Bash(netstat -ano)",
+      "Bash(kill -9 37508 17984)",
+      "Bash(taskkill //F //PID 37508)",
+      "Bash(taskkill //F //PID 17984)",
+      "Bash(taskkill //F //PID 40936)",
+      "Bash(taskkill //F //PID 185)",
+      "Bash(git status:*)",
+      "Bash(taskkill //F //PID 46384)",
+      "Bash(npx eslint:*)"
     ]
   }
 }

@@ -1,6 +1,6 @@
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
-import { Home, FileText, Upload, Search, Lightbulb, MapPin, GitBranch, Sparkles, HelpCircle } from "lucide-react";
+import { Home, FileText, Upload, Search, Lightbulb, MapPin, GitBranch, Zap, Sparkles, HelpCircle } from "lucide-react";
 import { Providers } from "@/components/providers";
 import { UserSetup } from "@/components/user-setup";
 import MaidenVoyageGate from "@/components/maiden-voyage-gate";
@@ -89,6 +89,14 @@ export default function DashboardLayout({
                 </Link>
 
                 <Link
+                  href="/cascade"
+                  className="px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-[#1B3D5C] hover:bg-[#1B3D5C]/5 transition-colors flex items-center gap-2"
+                >
+                  <Zap className="h-4 w-4" />
+                  <span>CASCADE</span>
+                </Link>
+
+                <Link
                   href="/upgrade"
                   className="px-3 py-2 rounded-lg text-sm font-medium text-[#F4B860] hover:bg-[#F4B860]/10 transition-colors flex items-center gap-2"
                 >
@@ -148,6 +156,10 @@ export default function DashboardLayout({
             <Link href="/connections" className="flex flex-col items-center gap-1 px-2 py-1 text-gray-600 hover:text-[#1B3D5C] transition-colors">
               <GitBranch className="h-5 w-5" />
               <span className="text-[10px] font-medium">CHARTS</span>
+            </Link>
+            <Link href="/cascade" className="flex flex-col items-center gap-1 px-2 py-1 text-gray-600 hover:text-[#1B3D5C] transition-colors">
+              <Zap className="h-5 w-5" />
+              <span className="text-[10px] font-medium">CASCADE</span>
             </Link>
             <Link href="/help" className="flex flex-col items-center gap-1 px-2 py-1 text-gray-600 hover:text-[#1B3D5C] transition-colors">
               <HelpCircle className="h-5 w-5" />

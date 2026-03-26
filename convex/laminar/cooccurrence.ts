@@ -190,3 +190,99 @@ export function suggestRelated(
   // so suggestions inherit that order. Just cap at MAX_SUGGESTIONS.
   return suggestions.slice(0, MAX_SUGGESTIONS);
 }
+
+// ---------------------------------------------------------------------------
+// Multi-User Co-Access Signal
+// ---------------------------------------------------------------------------
+
+/** Default session window for multi-user co-access (5 minutes). */
+const MULTI_USER_SESSION_WINDOW_MS = 300_000;
+
+/** Minimum multi-user strength to include in output. */
+const MULTI_USER_MIN_STRENGTH = 0.05;
+
+/**
+ * Detect documents that different team members access together within shared
+ * time windows. Reveals team-level behavioral patterns invisible in per-user
+ * co-occurrence analysis.
+ *
+ * "Documents A and B are always accessed together by senior team members
+ * before client calls" — a pattern TF-IDF can never detect.
+ *
+ * @param events - Access events with documentId, userId, and timestamp.
+ * @param sessionWindowMs - Time window for grouping events (default: 5 minutes).
+ * @returns Map of `"docA_docB"` → multiUserStrength (0–1), only pairs above threshold.
+ */
+export function computeMultiUserCoAccess(
+  events: Array<{ documentId: string; userId: string; timestamp: number }>,
+  sessionWindowMs: number = MULTI_USER_SESSION_WINDOW_MS,
+): Map<string, number> {
+  if (events.length === 0) return new Map();
+
+  // Step 1: Group events by time windows
+  const windowMap = new Map<number, Array<{ documentId: string; userId: string }>>();
+  for (const event of events) {
+    const windowKey = Math.floor(event.timestamp / sessionWindowMs);
+    const existing = windowMap.get(windowKey);
+    if (existing) {
+      existing.push({ documentId: event.documentId, userId: event.userId });
+    } else {
+      windowMap.set(windowKey, [{ documentId: event.documentId, userId: event.userId }]);
+    }
+  }
+
+  // Step 2: Find windows with ≥ 2 distinct users
+  const pairCounts = new Map<string, number>();
+  let multiUserWindowCount = 0;
+
+  for (const [, windowEvents] of windowMap) {
+    const userIds = new Set(windowEvents.map((e) => e.userId));
+    if (userIds.size < 2) continue;
+
+    multiUserWindowCount++;
+
+    // Find document pairs co-accessed by different users in this window
+    // Group docs by user first
+    const userDocs = new Map<string, Set<string>>();
+    for (const event of windowEvents) {
+      const docs = userDocs.get(event.userId);
+      if (docs) {
+        docs.add(event.documentId);
+      } else {
+        userDocs.set(event.userId, new Set([event.documentId]));
+      }
+    }
+
+    // For each pair of users, find their cross-user document pairs
+    const userList = [...userDocs.entries()];
+    for (let i = 0; i < userList.length; i++) {
+      for (let j = i + 1; j < userList.length; j++) {
+        const docsI = userList[i]![1];
+        const docsJ = userList[j]![1];
+
+        // Cross-user pairs: one doc from user i, one from user j
+        for (const docA of docsI) {
+          for (const docB of docsJ) {
+            if (docA === docB) continue; // same doc doesn't form a pair
+            // Canonical key: smaller ID first
+            const key = docA < docB ? `${docA}_${docB}` : `${docB}_${docA}`;
+            pairCounts.set(key, (pairCounts.get(key) ?? 0) + 1);
+          }
+        }
+      }
+    }
+  }
+
+  // Step 3: Normalize by total multi-user windows
+  const result = new Map<string, number>();
+  if (multiUserWindowCount === 0) return result;
+
+  for (const [key, count] of pairCounts) {
+    const strength = count / multiUserWindowCount;
+    if (strength >= MULTI_USER_MIN_STRENGTH) {
+      result.set(key, strength);
+    }
+  }
+
+  return result;
+}

@@ -84,8 +84,11 @@ const WINDOW_30D = 30 * MS_PER_DAY;
 /** Minimum events required for periodicity detection. */
 const MIN_EVENTS_FOR_PERIODICITY = 6;
 
-/** Coefficient of variation threshold for "regular" intervals. */
-const CV_THRESHOLD = 0.3;
+/** DFT window size in days. */
+const DFT_WINDOW_DAYS = 90;
+
+/** Minimum amplitude ratio to declare significant periodicity. */
+const FFT_SIGNIFICANCE_THRESHOLD = 0.3;
 
 /** Trend classification thresholds for rate of change. */
 const RISING_THRESHOLD = 0.2;
@@ -122,42 +125,88 @@ export function detectPeriodicity(
     return null;
   }
 
-  // Compute inter-access intervals in days.
-  const intervals: number[] = [];
-  for (let i = 1; i < sortedTimestamps.length; i++) {
-    const intervalDays =
-      (sortedTimestamps[i]! - sortedTimestamps[i - 1]!) / MS_PER_DAY;
-    intervals.push(intervalDays);
+  const now = _now || Date.now();
+
+  // Step 1: Bin timestamps into daily buckets (90-day window)
+  const startDay = Math.floor((now - DFT_WINDOW_DAYS * MS_PER_DAY) / MS_PER_DAY);
+  const bins = new Array<number>(DFT_WINDOW_DAYS).fill(0);
+
+  for (const ts of sortedTimestamps) {
+    const dayIndex = Math.floor(ts / MS_PER_DAY) - startDay;
+    if (dayIndex >= 0 && dayIndex < DFT_WINDOW_DAYS) {
+      bins[dayIndex] = 1;
+    }
   }
 
-  // Mean interval.
-  let sum = 0;
-  for (const interval of intervals) {
-    sum += interval;
-  }
-  const mean = sum / intervals.length;
+  // Step 2: Compute mean and subtract (DC removal)
+  let mean = 0;
+  for (const b of bins) mean += b;
+  mean /= bins.length;
+  const centered = bins.map((b) => b - mean);
 
-  // Guard: mean must be in [1, 30] days to be a meaningful period.
-  if (mean < 1 || mean > 30) {
+  // Step 3: Naive DFT — O(n²) for n=90, ~8100 operations
+  const n = centered.length;
+  let maxAmplitude = 0;
+  let dominantFreqIndex = 0;
+
+  // Skip DC component (k=0), start at k=1
+  for (let k = 1; k < Math.floor(n / 2); k++) {
+    let re = 0;
+    let im = 0;
+    for (let t = 0; t < n; t++) {
+      const angle = (2 * Math.PI * k * t) / n;
+      re += centered[t]! * Math.cos(angle);
+      im -= centered[t]! * Math.sin(angle);
+    }
+    const amplitude = Math.sqrt(re * re + im * im);
+
+    if (amplitude > maxAmplitude) {
+      maxAmplitude = amplitude;
+      dominantFreqIndex = k;
+    }
+  }
+
+  // Step 4: Convert frequency index to period in days
+  if (dominantFreqIndex === 0 || maxAmplitude === 0) {
     return null;
   }
 
-  // Standard deviation.
-  let varianceSum = 0;
-  for (const interval of intervals) {
-    const diff = interval - mean;
-    varianceSum += diff * diff;
+  const periodDays = n / dominantFreqIndex;
+
+  // Step 5: Significance check — dominant must exceed threshold relative to mean amplitude
+  let totalAmplitude = 0;
+  let freqCount = 0;
+  for (let k = 1; k < Math.floor(n / 2); k++) {
+    let re = 0;
+    let im = 0;
+    for (let t = 0; t < n; t++) {
+      const angle = (2 * Math.PI * k * t) / n;
+      re += centered[t]! * Math.cos(angle);
+      im -= centered[t]! * Math.sin(angle);
+    }
+    totalAmplitude += Math.sqrt(re * re + im * im);
+    freqCount++;
   }
-  const stdDev = Math.sqrt(varianceSum / intervals.length);
+  const meanAmplitude = freqCount > 0 ? totalAmplitude / freqCount : 0;
 
-  // Coefficient of variation.
-  const cv = stdDev / mean;
-
-  if (cv < CV_THRESHOLD) {
-    return mean;
+  if (meanAmplitude > 0 && maxAmplitude < FFT_SIGNIFICANCE_THRESHOLD * (maxAmplitude + meanAmplitude)) {
+    return null;
   }
 
-  return null;
+  // Step 6: Filter — only return meaningful periods (1–30 days)
+  if (periodDays < 1 || periodDays > 30) {
+    return null;
+  }
+
+  // Round to nearest common period: 7 (weekly), 14 (biweekly), 30 (monthly)
+  const commonPeriods = [7, 14, 30];
+  for (const cp of commonPeriods) {
+    if (Math.abs(periodDays - cp) < 1.5) {
+      return cp;
+    }
+  }
+
+  return Math.round(periodDays);
 }
 
 // ---------------------------------------------------------------------------
@@ -312,4 +361,211 @@ function countInWindow(
  */
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+// ---------------------------------------------------------------------------
+// Hurst Exponent via R/S (Rescaled Range) Analysis
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute the Hurst exponent for a document's access time series.
+ *
+ * R/S analysis measures long-range dependence in a time series:
+ *   H > 0.5 = persistent trend (attractor state — knowledge center)
+ *   H < 0.5 = anti-persistent (document relevance is cycling)
+ *   H ≈ 0.5 = random walk (no persistent pattern)
+ *
+ * Uses log-log regression of R/S values across multiple window sizes.
+ *
+ * @param accessTimestamps - Access event timestamps (epoch ms), any order.
+ * @param referenceDate    - Current time (epoch ms).
+ * @returns Hurst exponent, classification, and confidence estimate.
+ */
+export function computeHurstExponent(
+  accessTimestamps: number[],
+  referenceDate: number,
+): {
+  H: number;
+  classification: "attractor" | "cycling" | "random";
+  confidence: number;
+} {
+  // Minimum data requirement
+  if (accessTimestamps.length < 4) {
+    return { H: 0.5, classification: "random", confidence: 0 };
+  }
+
+  // Step 1: Convert to daily binary time series (90-day window)
+  const windowDays = 90;
+  const startDay = Math.floor((referenceDate - windowDays * MS_PER_DAY) / MS_PER_DAY);
+  const daySeries = new Array<number>(windowDays).fill(0);
+
+  for (const ts of accessTimestamps) {
+    const dayIndex = Math.floor(ts / MS_PER_DAY) - startDay;
+    if (dayIndex >= 0 && dayIndex < windowDays) {
+      daySeries[dayIndex] = 1;
+    }
+  }
+
+  // Step 2: R/S analysis across window sizes
+  // For sparse data (< 40 events), drop 32-day window to avoid instability
+  const allWindows = [4, 8, 16, 32];
+  const windowSizes = accessTimestamps.length < 40
+    ? allWindows.filter((w) => w <= 16)
+    : allWindows;
+
+  if (windowSizes.length < 2) {
+    return { H: 0.5, classification: "random", confidence: 0 };
+  }
+
+  const logW: number[] = [];
+  const logRS: number[] = [];
+
+  for (const w of windowSizes) {
+    const numSegments = Math.floor(windowDays / w);
+    if (numSegments < 1) continue;
+
+    let totalRS = 0;
+    let validSegments = 0;
+
+    for (let seg = 0; seg < numSegments; seg++) {
+      const segment = daySeries.slice(seg * w, (seg + 1) * w);
+
+      // Mean of segment
+      let segSum = 0;
+      for (const v of segment) segSum += v;
+      const segMean = segSum / w;
+
+      // Deviations from mean and cumulative sum
+      const cumDeviation = new Array<number>(w);
+      let cumSum = 0;
+      for (let t = 0; t < w; t++) {
+        cumSum += segment[t]! - segMean;
+        cumDeviation[t] = cumSum;
+      }
+
+      // Range R = max(cumulative) - min(cumulative)
+      let maxCum = -Infinity;
+      let minCum = Infinity;
+      for (const cd of cumDeviation) {
+        if (cd > maxCum) maxCum = cd;
+        if (cd < minCum) minCum = cd;
+      }
+      const R = maxCum - minCum;
+
+      // Standard deviation S
+      let varSum = 0;
+      for (const v of segment) {
+        const diff = v - segMean;
+        varSum += diff * diff;
+      }
+      const S = Math.sqrt(varSum / w);
+
+      // R/S ratio (skip if S is zero — all values identical)
+      if (S > 0) {
+        totalRS += R / S;
+        validSegments++;
+      }
+    }
+
+    if (validSegments > 0) {
+      const avgRS = totalRS / validSegments;
+      logW.push(Math.log(w));
+      logRS.push(Math.log(Math.max(avgRS, 1e-10)));
+    }
+  }
+
+  // Step 3: Log-log regression: log(R/S) ~ H * log(W)
+  if (logW.length < 2) {
+    return { H: 0.5, classification: "random", confidence: 0 };
+  }
+
+  // Least-squares slope: H = (n*Σxy - Σx*Σy) / (n*Σx² - (Σx)²)
+  const n = logW.length;
+  let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+  for (let i = 0; i < n; i++) {
+    sumX += logW[i]!;
+    sumY += logRS[i]!;
+    sumXY += logW[i]! * logRS[i]!;
+    sumXX += logW[i]! * logW[i]!;
+  }
+
+  const denominator = n * sumXX - sumX * sumX;
+  const H = denominator !== 0
+    ? (n * sumXY - sumX * sumY) / denominator
+    : 0.5;
+
+  // Clamp to valid range
+  const clampedH = Math.min(Math.max(H, 0.01), 0.99);
+
+  // Step 4: Confidence based on data density
+  const confidence = Math.min(accessTimestamps.length / 20, 1.0);
+
+  // Step 5: Classification
+  const classification: "attractor" | "cycling" | "random" =
+    clampedH > 0.60 ? "attractor" :
+    clampedH < 0.40 ? "cycling" :
+    "random";
+
+  return { H: clampedH, classification, confidence };
+}
+
+// ---------------------------------------------------------------------------
+// Predictive Access Probability Curve
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute the probability of a document being accessed at future horizons.
+ *
+ * Uses exponential decay on inter-access intervals:
+ *   P(t) = 1 - exp(-lambda * t)
+ *   where lambda = 1 / mean_inter_access_interval_in_days
+ *
+ * Returns probabilities for 1-day, 7-day, and 30-day horizons.
+ * Documents with fewer than 3 accesses return zeros (insufficient data).
+ *
+ * @param accessTimestamps - Access event timestamps (epoch ms), any order.
+ * @param referenceDate    - Current time (epoch ms).
+ * @returns Probability object with day1, day7, day30 fields, all in [0, 1].
+ */
+export function computeAccessProbabilityCurve(
+  accessTimestamps: number[],
+  referenceDate: number,
+): { day1: number; day7: number; day30: number } {
+  if (accessTimestamps.length < 3) {
+    return { day1: 0, day7: 0, day30: 0 };
+  }
+
+  // Sort ascending
+  const sorted = [...accessTimestamps].sort((a, b) => a - b);
+
+  // Compute inter-access intervals in days
+  let totalIntervalDays = 0;
+  let intervalCount = 0;
+  for (let i = 1; i < sorted.length; i++) {
+    const intervalDays = (sorted[i]! - sorted[i - 1]!) / MS_PER_DAY;
+    if (intervalDays > 0) {
+      totalIntervalDays += intervalDays;
+      intervalCount++;
+    }
+  }
+
+  // Mean inter-access interval
+  const meanInterval = intervalCount > 0 ? totalIntervalDays / intervalCount : 30;
+
+  // Lambda = 1 / mean interval (rate parameter for exponential)
+  const lambda = 1 / Math.max(meanInterval, 0.1); // floor at 0.1 to avoid Infinity
+
+  // Also factor in recency: how many days since last access
+  const daysSinceLast = (referenceDate - sorted[sorted.length - 1]!) / MS_PER_DAY;
+
+  // Recency-adjusted lambda: if last access was long ago, reduce probability
+  const recencyFactor = Math.exp(-daysSinceLast / 30); // decays over 30 days
+  const adjustedLambda = lambda * recencyFactor;
+
+  // P(accessed within t days) = 1 - exp(-lambda * t)
+  const day1 = clamp(1 - Math.exp(-adjustedLambda * 1), 0, 1);
+  const day7 = clamp(1 - Math.exp(-adjustedLambda * 7), 0, 1);
+  const day30 = clamp(1 - Math.exp(-adjustedLambda * 30), 0, 1);
+
+  return { day1, day7, day30 };
 }

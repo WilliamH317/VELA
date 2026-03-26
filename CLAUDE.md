@@ -102,6 +102,8 @@ convex/laminar/
 
 **Rule 1 — SoC Boundary:** The 7 pure files above must never import from `convex/_generated/` or `convex/server`. If grep finds a match, it is a violation. Fix before writing new code.
 
+**Rule 1b — Convex File Classification:** `cascade.ts` and `fractal.ts` are Convex files — they import from `_generated/server`. Do not move functions from these files into pure TypeScript files. Pure computation helpers (e.g., `computeHurstExponent`, `adaptiveDecay`) belong in their respective pure files (`temporal.ts`, etc.) and are imported by the Convex orchestration files.
+
 **Rule 2 — Bounded Context:** `engine.ts`, `graph.ts`, `runner.ts`, `cascade.ts`, `fractal.ts` must NEVER call `ctx.db.query("documents")` or `ctx.db.query("users")` directly. All document reads go through the bridge:
 ```typescript
 // ONLY legal way to read documents inside laminar/
@@ -116,6 +118,26 @@ await ctx.scheduler.runAfter(0, internal.laminar.runner.onDocumentIngested, {
   userId: identity.subject,
 });
 ```
+
+**Rule 3b — Scheduled Actions Have No Auth Context:** Functions called via `ctx.scheduler.runAfter` run without a user session. They must NEVER call `ctx.auth.getUserIdentity()` — it will always return `null`. Always pass `userId` as an explicit argument from the calling mutation and use it directly in the scheduled action handler:
+```typescript
+// ✅ CORRECT — userId passed explicitly
+export const triggerClustering = internalAction({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }): Promise<void> => {
+    await ctx.runAction(internal.laminar.engine.internalRun, { userId });
+  },
+});
+
+// ❌ WRONG — scheduled actions have no auth context
+export const triggerClustering = internalAction({
+  handler: async (ctx): Promise<void> => {
+    const identity = await ctx.auth.getUserIdentity(); // ALWAYS null
+  },
+});
+```
+
+For public actions that can be called both from client (with auth) and from scheduler (without auth), split into `run` (public, auth-gated) and `internalRun` (internal, accepts userId arg). The public action delegates to the internal one.
 
 **Rule 4 — Non-blocking Signals:** Access event logging must NEVER block AI responses:
 ```typescript

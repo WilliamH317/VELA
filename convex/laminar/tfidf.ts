@@ -303,3 +303,119 @@ export function buildTFIDFFromSignals(signals: Array<{ terms: string[] }>): {
   const vectors = computeTFIDF(documents, vocabulary);
   return { vocabulary, vectors };
 }
+
+// ============================================================================
+// VERTICAL-WEIGHTED TF-IDF
+// ============================================================================
+
+/**
+ * Compute a hybrid IDF that blends global corpus IDF with vertical-specific IDF.
+ *
+ * Documents tagged with a verticalTag get a vocabulary tuned to their domain.
+ * Agency documents get agency-weighted vocabulary, support gets support-weighted, etc.
+ *
+ * The blended IDF for each term:
+ *   finalIDF = globalWeight × globalIDF + verticalWeight × verticalIDF
+ *
+ * @param documents - Array of {id, content, verticalTag?} objects.
+ * @param globalWeight  - Weight for global IDF (default 0.6).
+ * @param verticalWeight - Weight for vertical-specific IDF (default 0.4).
+ * @returns Map from document id to TF-IDF vector.
+ */
+export function computeVerticalWeightedTFIDF(
+  documents: Array<{ id: string; content: string; verticalTag?: string }>,
+  globalWeight: number = 0.6,
+  verticalWeight: number = 0.4,
+): Map<string, number[]> {
+  const allContents = documents.map((d) => d.content);
+
+  // Step 1: Build global vocabulary
+  const vocab = buildVocabulary(allContents);
+
+  // Step 2: Compute global IDF
+  const n = documents.length;
+  const globalDocFreq = new Array<number>(vocab.length).fill(0);
+  const tokenSets = documents.map((d) => new Set(tokenize(d.content)));
+
+  for (let t = 0; t < vocab.length; t++) {
+    for (const tokens of tokenSets) {
+      if (tokens.has(vocab[t]!)) globalDocFreq[t]!++;
+    }
+  }
+
+  const globalIDF = globalDocFreq.map((df) =>
+    df > 0 ? Math.log(n / df) : 0,
+  );
+
+  // Step 3: Group by vertical
+  const verticals = new Map<string, number[]>(); // vertical → doc indices
+  for (let i = 0; i < documents.length; i++) {
+    const vt = documents[i]!.verticalTag ?? "default";
+    const indices = verticals.get(vt);
+    if (indices) {
+      indices.push(i);
+    } else {
+      verticals.set(vt, [i]);
+    }
+  }
+
+  // Step 4: Compute per-vertical IDF
+  const verticalIDF = new Map<string, number[]>();
+  for (const [vt, indices] of verticals) {
+    const vn = indices.length;
+    const vDocFreq = new Array<number>(vocab.length).fill(0);
+    for (const idx of indices) {
+      for (let t = 0; t < vocab.length; t++) {
+        if (tokenSets[idx]!.has(vocab[t]!)) vDocFreq[t]!++;
+      }
+    }
+    verticalIDF.set(
+      vt,
+      vDocFreq.map((df) => (df > 0 ? Math.log(vn / df) : 0)),
+    );
+  }
+
+  // Step 5: Compute TF × blended IDF per document
+  const result = new Map<string, number[]>();
+  for (let i = 0; i < documents.length; i++) {
+    const doc = documents[i]!;
+    const tokens = tokenize(doc.content);
+    const vt = doc.verticalTag ?? "default";
+    const vIDF = verticalIDF.get(vt) ?? globalIDF;
+
+    // Compute term frequencies
+    const tf = new Array<number>(vocab.length).fill(0);
+    for (const token of tokens) {
+      const idx = vocab.indexOf(token);
+      if (idx >= 0) tf[idx]!++;
+    }
+    // Normalize TF
+    const maxTF = Math.max(...tf, 1);
+    for (let t = 0; t < vocab.length; t++) {
+      tf[t] = tf[t]! / maxTF;
+    }
+
+    // Blended IDF
+    const vec = new Array<number>(vocab.length);
+    for (let t = 0; t < vocab.length; t++) {
+      const blendedIDF = globalWeight * globalIDF[t]! + verticalWeight * vIDF[t]!;
+      vec[t] = tf[t]! * blendedIDF;
+    }
+
+    // L2 normalize
+    let norm = 0;
+    for (let t = 0; t < vocab.length; t++) {
+      norm += vec[t]! * vec[t]!;
+    }
+    norm = Math.sqrt(norm);
+    if (norm > 0) {
+      for (let t = 0; t < vocab.length; t++) {
+        vec[t] = vec[t]! / norm;
+      }
+    }
+
+    result.set(doc.id, vec);
+  }
+
+  return result;
+}
