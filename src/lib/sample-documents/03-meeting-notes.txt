@@ -1,0 +1,60 @@
+Meridian Analytics Rebrand — Kickoff Meeting Notes
+
+Date: March 3, 2026
+Attendees: Sarah Chen (Meridian CMO), David Park (Meridian VP Product),
+           Lisa Torres (Creative Director), Marcus Webb (Brand Strategist),
+           Aisha Patel (Project Manager)
+
+AGENDA
+1. Project goals alignment
+2. Timeline review
+3. Stakeholder interview schedule
+4. Brand perception survey design
+5. Action items and next steps
+
+DECISIONS MADE
+
+Brand direction: The team agreed that Meridian's repositioning should
+emphasize "intelligence" and "decision-making" rather than "analytics"
+and "data." Sarah noted that their sales team consistently hears prospects
+say "we already have a reporting tool" — the rebrand must break this
+association.
+
+Timeline confirmed: 12-week timeline approved. Sarah flagged that their
+annual customer conference is in Week 14, so all launch materials must
+be finalized by Week 12 with zero slippage.
+
+Survey scope: Marcus proposed surveying both current customers (200 sample)
+and prospects who declined (50 sample) to understand the perception gap.
+David confirmed the prospect list is available from their CRM.
+
+Design constraints: Lisa raised that Meridian's current teal color has
+strong brand equity with existing users. Recommendation: evolve the
+palette rather than replace it entirely. Sarah agreed — "evolution,
+not revolution."
+
+ACTION ITEMS
+
+[ ] Marcus: Draft stakeholder interview guide by Friday March 7
+[ ] Marcus: Design brand perception survey — client review by March 10
+[ ] Lisa: Compile competitive visual audit (8 competitors) by March 14
+[ ] Aisha: Schedule 5 internal stakeholder interviews for Week 2
+[ ] Aisha: Send survey deployment plan to Sarah for approval
+[ ] David: Provide prospect decline list from CRM by March 7
+[ ] Sarah: Identify 3 customer champions willing to participate in interviews
+
+NEXT MEETING
+March 10, 2026 — Discovery progress check-in
+
+RISK FLAGS
+- Conference deadline in Week 14 leaves zero buffer. Aisha will build
+  3-day buffers into each phase internally.
+- David mentioned potential product pivot in Q3 — if the product roadmap
+  changes significantly, messaging may need revision. Marcus recommended
+  we build the messaging framework to be modular.
+
+PARKING LOT
+- Video testimonials for launch (out of scope, but Sarah interested —
+  revisit in Phase 4 if budget allows)
+- International market messaging (defer to Phase 2 of engagement if
+  Meridian expands to EMEA)

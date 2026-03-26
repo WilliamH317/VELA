@@ -1,0 +1,70 @@
+Project Retrospective: Cascade Fitness Rebrand (Q4 2025)
+
+Project Lead: Lisa Torres
+Date: January 15, 2026
+Engagement Duration: 10 weeks (originally scoped for 8)
+
+OVERVIEW
+Cascade Fitness hired us to rebrand from a regional gym chain identity
+to a national wellness platform positioning. Final deliverables included
+brand strategy, visual identity, launch landing page, and sales deck.
+
+WHAT WENT WELL
+
+Client relationship: Weekly check-ins with their CMO kept alignment
+tight. The client felt heard throughout the process, which their feedback
+survey confirmed — 9.2/10 on "felt like a true partner."
+
+Brand strategy phase: The discovery research was thorough. We interviewed
+12 stakeholders (5 internal, 7 customers) and the insights directly
+shaped the positioning statement. The client approved the strategy
+document on the first review round — zero revisions needed.
+
+Cross-team collaboration: The strategist-designer handoff worked smoothly
+this time. Marcus' strategy brief included specific visual direction
+notes that Lisa's team could act on immediately. This saved an estimated
+week of back-and-forth.
+
+Deliverable quality: Client rated final deliverables 9.5/10. The brand
+guidelines document was called "the best we've ever received" in their
+feedback survey.
+
+WHAT TO IMPROVE
+
+Scope creep on collateral: The original SOW included a 12-slide sales
+deck. By Phase 4, the client had expanded this to a 28-slide deck plus
+a leave-behind PDF. We absorbed the extra work without a change order,
+which added 2 weeks to the timeline and reduced our effective margin
+by approximately 12%.
+
+Recommendation: Enforce change order process for any deliverable that
+exceeds the original scope by more than 25%. Build this threshold into
+the SOW template.
+
+Revision tracking: We lost track of which feedback was from which
+stakeholder during the visual identity phase. Two conflicting rounds
+of revisions were submitted simultaneously, causing confusion.
+
+Recommendation: Designate a single client-side feedback consolidator
+in the SOW. All revision requests flow through one person.
+
+Timeline estimation: We underestimated the collateral production phase
+by 2 weeks. The landing page development took longer than expected
+because the client's CMS required custom integration work.
+
+Recommendation: Add a technical discovery step for any deliverable
+that involves client-side systems. Estimate development time after
+the technical review, not before.
+
+PROCESS NOTES
+
+Total billable hours: 412 (budget was 380)
+Effective hourly rate: $218 (target was $250)
+Client satisfaction score: 9.3/10
+Net Promoter Score: 9 (promoter)
+Likelihood of repeat engagement: High — already discussing Phase 2
+
+KEY TAKEAWAY
+The strategy and creative work was excellent. The margin erosion came
+entirely from scope management in the production phase. Fix the change
+order process and this becomes a highly profitable engagement model.

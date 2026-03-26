@@ -39,6 +39,13 @@ export default defineSchema({
     stripeCustomerId: v.optional(v.string()),
     stripeSubscriptionId: v.optional(v.string()),
     currentPeriodEnd: v.optional(v.number()), // Unix timestamp ms
+
+    // Rate limiting (Day 25)
+    queriesThisMonth: v.optional(v.number()),
+    lastQueryReset: v.optional(v.number()), // Unix timestamp ms
+
+    // Onboarding (Day 24)
+    onboardingComplete: v.optional(v.boolean()),
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_stripe_customer", ["stripeCustomerId"]),

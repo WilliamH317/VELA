@@ -7,7 +7,7 @@
 //   users: { clerkId, email, name, imageUrl?, subscription, createdAt, updatedAt }
 //   Index: by_clerk_id → ["clerkId"]
 
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 // ─────────────────────────────────────────────
@@ -152,6 +152,57 @@ export const createOrSync = mutation({
   },
 });
 
+// ─────────────────────────────────────────────
+// Onboarding (Day 24 — MAIDEN VOYAGE)
+// ─────────────────────────────────────────────
+
+/**
+ * Check if the current user has completed onboarding.
+ * Returns true for unauthenticated users (don't show onboarding to them).
+ * Returns false for new users who haven't completed the MAIDEN VOYAGE.
+ *
+ * IMPORTANT: Client code must use strict equality (=== false) to render
+ * the overlay. useQuery returns undefined during loading — a falsy check
+ * would flash the overlay on every page load.
+ */
+export const isOnboardingComplete = query({
+  args: {},
+  handler: async (ctx): Promise<boolean> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return true;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .first();
+
+    return user?.onboardingComplete ?? false;
+  },
+});
+
+/**
+ * Mark onboarding as complete for the current user.
+ *
+ * This is a public mutation (NOT internalMutation) because it's called
+ * directly from the MaidenVoyage client component via useMutation.
+ */
+export const completeOnboarding = mutation({
+  args: {},
+  handler: async (ctx): Promise<void> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .first();
+
+    if (!user) throw new Error("User not found");
+
+    await ctx.db.patch(user._id, { onboardingComplete: true });
+  },
+});
+
 /**
  * @deprecated Use createOrSync instead. Kept for backward compatibility
  * with any existing UserSetup components that call `api.users.create`.
@@ -183,5 +234,50 @@ export const create = mutation({
       createdAt: now,
       updatedAt: now,
     });
+  },
+});
+
+// ─────────────────────────────────────────────
+// Internal Functions (Day 25 — Rate Limiting)
+// ─────────────────────────────────────────────
+
+/**
+ * Look up a user by Clerk ID. Internal-only — called from ai.ts action
+ * for rate limit checks. Not exposed to client.
+ */
+export const getUserByClerk = internalQuery({
+  args: { clerkId: v.string() },
+  handler: async (ctx, { clerkId }) => {
+    return ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", clerkId))
+      .first();
+  },
+});
+
+/**
+ * Increment the query counter for rate limiting.
+ * Resets to 1 if the 30-day window has elapsed.
+ * Internal-only — called via scheduler.runAfter (fire-and-forget).
+ */
+export const incrementQueryCount = internalMutation({
+  args: { clerkId: v.string(), resetIfStale: v.boolean() },
+  handler: async (ctx, { clerkId, resetIfStale }): Promise<void> => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", clerkId))
+      .first();
+    if (!user) return;
+
+    if (resetIfStale) {
+      await ctx.db.patch(user._id, {
+        queriesThisMonth: 1,
+        lastQueryReset: Date.now(),
+      });
+    } else {
+      await ctx.db.patch(user._id, {
+        queriesThisMonth: (user.queriesThisMonth ?? 0) + 1,
+      });
+    }
   },
 });
