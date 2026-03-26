@@ -246,6 +246,36 @@ export const askQuestion = action({
     validateQuery(args.query);
     validateDocumentIds(args.documentIds);
 
+    // --- Rate limit check (BEFORE Claude API call) ---
+    const user = await ctx.runQuery(internal.users.getUserByClerk, {
+      clerkId: identity.subject,
+    });
+    if (user) {
+      const tier = user.subscription ?? "free";
+      const now = Date.now();
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+      const lastReset = user.lastQueryReset ?? 0;
+      const queriesThisMonth =
+        now - lastReset > thirtyDaysMs ? 0 : (user.queriesThisMonth ?? 0);
+
+      if (tier === "free" && queriesThisMonth >= 20) {
+        throw new Error(
+          "Stormy seas — your monthly query limit is reached. Upgrade to Individual for unlimited queries.",
+        );
+      }
+
+      // Increment counter (fire-and-forget — does not block streaming)
+      await ctx.scheduler.runAfter(
+        0,
+        internal.users.incrementQueryCount,
+        {
+          clerkId: identity.subject,
+          resetIfStale: now - lastReset > thirtyDaysMs,
+        },
+      );
+    }
+    // --- End rate limit check ---
+
     const trimmedQuery = args.query.trim();
 
     // Fetch and Verify Documents
@@ -379,6 +409,36 @@ export const generateAnswer = action({
 
     // Input Validation
     validateQuery(args.query);
+
+    // --- Rate limit check (BEFORE Claude API call) ---
+    const user = await ctx.runQuery(internal.users.getUserByClerk, {
+      clerkId: identity.subject,
+    });
+    if (user) {
+      const tier = user.subscription ?? "free";
+      const now = Date.now();
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+      const lastReset = user.lastQueryReset ?? 0;
+      const queriesThisMonth =
+        now - lastReset > thirtyDaysMs ? 0 : (user.queriesThisMonth ?? 0);
+
+      if (tier === "free" && queriesThisMonth >= 20) {
+        throw new Error(
+          "Stormy seas — your monthly query limit is reached. Upgrade to Individual for unlimited queries.",
+        );
+      }
+
+      // Increment counter (fire-and-forget — does not block streaming)
+      await ctx.scheduler.runAfter(
+        0,
+        internal.users.incrementQueryCount,
+        {
+          clerkId: identity.subject,
+          resetIfStale: now - lastReset > thirtyDaysMs,
+        },
+      );
+    }
+    // --- End rate limit check ---
 
     const trimmedQuery = args.query.trim();
     const maxSources = Math.min(args.maxSources || 5, MAX_DOCUMENTS);

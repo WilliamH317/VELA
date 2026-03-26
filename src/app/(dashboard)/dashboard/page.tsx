@@ -16,6 +16,7 @@ import { api } from "../../../../convex/_generated/api";
 import LoadingWave from "@/components/loading-wave";
 import LaminarSummaryWidget from "@/components/laminar-summary-widget";
 import LaminarPreview from "@/components/laminar-preview";
+import ErrorBoundary from "@/components/error-boundary";
 import Link from "next/link";
 
 function formatTimeAgo(timestamp: number): string {
@@ -47,6 +48,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Zone B — 4-Stat Row */}
+      <ErrorBoundary>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {/* CARGO HOLD */}
         <div
@@ -138,8 +140,10 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+      </ErrorBoundary>
 
       {/* Zone C — LAMINAR Widget (tier-aware) */}
+      <ErrorBoundary>
       {userLimits === undefined || clusterData === undefined ? (
         <LoadingWave message="Charting your knowledge currents..." />
       ) : clusterData !== null &&
@@ -155,6 +159,8 @@ export default function DashboardPage() {
       ) : (
         <LaminarSummaryWidget />
       )}
+
+      </ErrorBoundary>
 
       {/* Near-limit warning */}
       {userLimits &&
@@ -175,6 +181,7 @@ export default function DashboardPage() {
         )}
 
       {/* Zone D — Recent CARGO */}
+      <ErrorBoundary>
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-[#1B3D5C]">
@@ -245,6 +252,8 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      </ErrorBoundary>
 
       {/* Zone E — Quick Actions */}
       <div className="flex flex-col sm:flex-row gap-3 mt-8 pb-8">

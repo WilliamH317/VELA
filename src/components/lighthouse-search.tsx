@@ -441,25 +441,46 @@ export function LighthouseSearch() {
           ERROR STATE
           ======================================== */}
       {error && !isLoading && (
-        <Card className="p-6 border-red-200 bg-red-50">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+        <div className="space-y-4">
+          {/* Degradation banner — LIGHTHOUSE dark, COMPASS still active */}
+          <div className="border border-[#1B3D5C]/30 bg-[#1B3D5C]/5 rounded-lg p-4 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-[#00BCD4] mt-0.5 flex-shrink-0" />
             <div className="flex-1">
-              <h3 className="font-semibold text-red-900 mb-1">
-                Navigating through fog
+              <h3 className="font-semibold text-[#1B3D5C]">
+                The LIGHTHOUSE is temporarily dark
               </h3>
-              <p className="text-sm text-red-700 whitespace-pre-wrap">{error}</p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setError(null)}
-                className="mt-3 border-red-300 text-red-700 hover:bg-red-100"
-              >
-                Try Again
-              </Button>
+              <p className="text-sm text-gray-600 mt-1">
+                Navigating by COMPASS — try a keyword search instead.
+              </p>
             </div>
           </div>
-        </Card>
+
+          {/* Error details */}
+          <Card className="p-6 border-red-200 bg-red-50">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm text-red-700 whitespace-pre-wrap">{error}</p>
+                <div className="flex items-center gap-3 mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setError(null)}
+                    className="border-red-300 text-red-700 hover:bg-red-100"
+                  >
+                    Try Again
+                  </Button>
+                  <a
+                    href="/search"
+                    className="text-sm text-[#00BCD4] hover:underline"
+                  >
+                    Open COMPASS →
+                  </a>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
       )}
 
       {/* ========================================

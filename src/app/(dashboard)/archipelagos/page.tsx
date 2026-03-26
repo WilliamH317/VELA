@@ -235,9 +235,39 @@ export default function ArchipelagosPage() {
   const clusters = "clusters" in clusterData ? clusterData.clusters : undefined;
   if (!run || !clusters) return null;
 
+  // Stale data check (>24h since last clustering)
+  const isStale =
+    !run?.completedAt ||
+    Date.now() - run.completedAt > 24 * 60 * 60 * 1000;
+
   return (
     <PageShell>
       <PageHeader onRechart={handleRechart} isRunning={isRunning} />
+
+      {/* Stale data banner */}
+      {isStale && !isRunning && (
+        <div
+          className="border rounded-lg p-4 flex items-start gap-3"
+          style={{
+            borderColor: "rgba(27, 61, 92, 0.3)",
+            backgroundColor: "rgba(27, 61, 92, 0.05)",
+          }}
+        >
+          <Compass
+            className="h-5 w-5 mt-0.5 shrink-0"
+            style={{ color: "#00BCD4" }}
+          />
+          <div>
+            <p className="font-semibold" style={{ color: "#1B3D5C" }}>
+              Recharting the ARCHIPELAGOS
+            </p>
+            <p className="text-sm text-gray-600 mt-1">
+              Your knowledge map hasn&apos;t been updated in a while. Upload a
+              new document to trigger recalculation.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Status bar */}
       <div
