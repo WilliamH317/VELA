@@ -1,8 +1,9 @@
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
-import { Home, FileText, Upload, Search, Lightbulb, MapPin, GitBranch, Sparkles } from "lucide-react";
+import { Home, FileText, Upload, Search, Lightbulb, MapPin, GitBranch, Sparkles, HelpCircle } from "lucide-react";
 import { Providers } from "@/components/providers";
 import { UserSetup } from "@/components/user-setup";
+import MaidenVoyageGate from "@/components/maiden-voyage-gate";
 
 export default function DashboardLayout({
   children,
@@ -94,6 +95,14 @@ export default function DashboardLayout({
                   <Sparkles className="h-4 w-4" />
                   <span>UPGRADE</span>
                 </Link>
+
+                <Link
+                  href="/help"
+                  className="px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-[#1B3D5C] hover:bg-[#1B3D5C]/5 transition-colors flex items-center gap-2"
+                >
+                  <HelpCircle className="h-4 w-4" />
+                  <span>HELP</span>
+                </Link>
               </div>
             </div>
 
@@ -140,6 +149,10 @@ export default function DashboardLayout({
               <GitBranch className="h-5 w-5" />
               <span className="text-[10px] font-medium">CHARTS</span>
             </Link>
+            <Link href="/help" className="flex flex-col items-center gap-1 px-2 py-1 text-gray-600 hover:text-[#1B3D5C] transition-colors">
+              <HelpCircle className="h-5 w-5" />
+              <span className="text-[10px] font-medium">HELP</span>
+            </Link>
           </div>
         </div>
       </nav>
@@ -168,6 +181,7 @@ export default function DashboardLayout({
         </div>
       </footer>
     </div>
+    <MaidenVoyageGate />
     </Providers>
   );
 }
