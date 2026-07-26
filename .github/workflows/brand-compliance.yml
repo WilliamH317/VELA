@@ -1,0 +1,82 @@
+name: Brand Compliance
+
+on:
+  push:
+    paths:
+      - "src/**"
+      - "app/**"
+  pull_request:
+    paths:
+      - "src/**"
+      - "app/**"
+
+jobs:
+  brand-check:
+    name: VELA Brand Rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for forbidden colors
+        run: |
+          VIOLATIONS=0
+          # Scan all TSX/CSS files for forbidden blue/cyan classes and hex codes
+          if grep -rE 'bg-blue-|text-blue-|border-blue-|bg-cyan-|text-cyan-|border-cyan-|bg-sky-|text-sky-|border-sky-' \
+            --include='*.tsx' --include='*.ts' --include='*.css' \
+            src/ app/ 2>/dev/null; then
+            echo "::error::Tailwind blue-*/cyan-*/sky-* classes detected — use Navy #1B3D5C or Teal #00BCD4 only"
+            VIOLATIONS=$((VIOLATIONS + 1))
+          fi
+          if grep -rE '#0000FF|#00FFFF|#1E90FF|#007BFF|#87CEEB' \
+            --include='*.tsx' --include='*.ts' --include='*.css' \
+            src/ app/ 2>/dev/null; then
+            echo "::error::Forbidden hex color detected — use #1B3D5C (Navy) or #00BCD4 (Teal) only"
+            VIOLATIONS=$((VIOLATIONS + 1))
+          fi
+          if [ $VIOLATIONS -gt 0 ]; then
+            exit 1
+          fi
+          echo "Color palette is compliant"
+
+      - name: Check for spinner violations
+        run: |
+          if grep -rE 'animate-spin' \
+            --include='*.tsx' --include='*.ts' --include='*.css' \
+            src/ app/ 2>/dev/null; then
+            echo "::error::animate-spin detected — use wave/pulse animations only"
+            exit 1
+          fi
+          echo "No spinner violations"
+
+      - name: Check for generic loading text
+        run: |
+          VIOLATIONS=0
+          if grep -rE '"Loading\.\.\."|"Searching\.\.\."|"Uploading\.\.\."|"Processing\.\.\."' \
+            --include='*.tsx' --include='*.ts' \
+            src/ app/ 2>/dev/null; then
+            echo "::error::Generic loading text detected — use nautical equivalents (see CLAUDE.md UI State Copy)"
+            VIOLATIONS=$((VIOLATIONS + 1))
+          fi
+          if [ $VIOLATIONS -gt 0 ]; then
+            exit 1
+          fi
+          echo "Loading text is nautical"
+
+      - name: Check for forbidden jargon
+        run: |
+          # Only scan user-facing strings (in JSX), not variable names or comments
+          # This uses a broad check — may produce false positives in rare cases
+          JARGON_FOUND=0
+          for word in "optimize" "workflow" "efficiency" "synergy" "leverage" "scalable" "paradigm"; do
+            # Search in string literals and JSX text content
+            if grep -rniE "\"[^\"]*\b${word}\b[^\"]*\"|>[^<]*\b${word}\b[^<]*<" \
+              --include='*.tsx' \
+              src/ app/ 2>/dev/null; then
+              echo "::warning::Forbidden jargon '$word' found in user-facing text"
+              JARGON_FOUND=$((JARGON_FOUND + 1))
+            fi
+          done
+          if [ $JARGON_FOUND -gt 0 ]; then
+            echo "::warning::$JARGON_FOUND forbidden jargon instance(s) — review for user-facing text"
+          fi
+          echo "Jargon check complete"
