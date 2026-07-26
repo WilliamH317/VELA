@@ -1,0 +1,78 @@
+name: LAMINAR Boundary Check
+
+on:
+  push:
+    paths:
+      - "convex/laminar/**"
+  pull_request:
+    paths:
+      - "convex/laminar/**"
+
+jobs:
+  boundary-check:
+    name: SoC + Bounded Context
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify pure TS files have zero Convex imports
+        run: |
+          PURE_FILES=(
+            "convex/laminar/tfidf.ts"
+            "convex/laminar/kmeans.ts"
+            "convex/laminar/confidence.ts"
+            "convex/laminar/temporal.ts"
+            "convex/laminar/cooccurrence.ts"
+            "convex/laminar/pipeline.ts"
+            "convex/laminar/processors.ts"
+          )
+          VIOLATIONS=0
+          for file in "${PURE_FILES[@]}"; do
+            if [ -f "$file" ] && grep -qE 'from\s+"convex/|from\s+"\.\./_generated/' "$file"; then
+              echo "::error file=$file::SoC VIOLATION — $file imports from Convex runtime"
+              grep -nE 'from\s+"convex/|from\s+"\.\./_generated/' "$file"
+              VIOLATIONS=$((VIOLATIONS + 1))
+            fi
+          done
+          if [ $VIOLATIONS -gt 0 ]; then
+            echo "::error::$VIOLATIONS SoC boundary violation(s) detected in pure TS files"
+            exit 1
+          fi
+          echo "All pure TS files are clean"
+
+      - name: Verify bounded context (no direct document/user queries)
+        run: |
+          CONVEX_FILES=(
+            "convex/laminar/engine.ts"
+            "convex/laminar/graph.ts"
+            "convex/laminar/runner.ts"
+            "convex/laminar/cascade.ts"
+            "convex/laminar/fractal.ts"
+          )
+          VIOLATIONS=0
+          for file in "${CONVEX_FILES[@]}"; do
+            # Skip comment lines (// or *) — only flag actual code
+            if [ -f "$file" ] && grep -vE '^\s*(//|\*)' "$file" | grep -qE 'ctx\.db\.query\("documents"\)|ctx\.db\.query\("users"\)'; then
+              echo "::error file=$file::BOUNDED CONTEXT VIOLATION — $file queries documents/users directly (must use getForLaminar bridge)"
+              grep -vE '^\s*(//|\*)' "$file" | grep -nE 'ctx\.db\.query\("documents"\)|ctx\.db\.query\("users"\)'
+              VIOLATIONS=$((VIOLATIONS + 1))
+            fi
+          done
+          if [ $VIOLATIONS -gt 0 ]; then
+            echo "::error::$VIOLATIONS bounded context violation(s) detected"
+            exit 1
+          fi
+          echo "All Convex LAMINAR files use getForLaminar bridge"
+
+      - name: Verify scheduled actions pass userId (Rule 3b)
+        run: |
+          VIOLATIONS=0
+          for file in convex/laminar/*.ts; do
+            # Check for ctx.auth.getUserIdentity() in internal functions
+            # Internal actions/mutations should receive userId as an arg, not call auth
+            if grep -qE 'internalAction|internalMutation' "$file" && \
+               grep -qE 'ctx\.auth\.getUserIdentity' "$file"; then
+              echo "::warning file=$file::Potential Rule 3b violation — internal function calls ctx.auth.getUserIdentity() (scheduled actions have no auth context)"
+            fi
+          done
+          echo "Rule 3b check complete"
